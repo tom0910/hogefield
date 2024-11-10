@@ -1,1 +1,9 @@
 jupyterlab>3.0
+torch
+torchvision
+torchaudio
+numpy
+snntorch
+matplotlib
+soundfile
+ipywidgets

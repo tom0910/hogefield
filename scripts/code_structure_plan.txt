@@ -1,0 +1,18 @@
+project_root/
+├── data/                     # Keep for storing raw and processed data
+│   └── GSC/                  # Dataset folder (e.g., Google Speech Commands)
+├── scripts/                  # Script for downloading data
+│   └── download_data.py      # Script to download the GSC dataset
+├── notebooks/                # Keep Jupyter notebooks for data exploration
+│   └── main_preprocessor_2.ipynb
+├── src/                      # Core code modules
+│   ├── __init__.py
+│   ├── data/                 # For data handling functions
+│   │   └── data_loader.py
+│   ├── models/               # Move `models` here
+│   │   └── speech_model.py   # Model definitions
+│   ├── train/                # Training code
+│   │   └── trainer.py
+│   └── evaluate/             # Evaluation code
+│       └── evaluator.py
+└── requirements.txt          # List dependencies

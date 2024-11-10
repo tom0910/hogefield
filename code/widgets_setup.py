@@ -88,12 +88,6 @@ def create_widgets(audio_sample, mel_config, spikes_data):
         f"</div>",
         layout=widgets.Layout(width="300px")
     )
-    spk_freq_label = widgets.HTML(
-        value=f"<div style='text-align: center;'>"
-        f"hello:{}"
-        f"</div>",
-        layout=widgets.Layout(width="300px")
-    )
     
     # Update the label based on changes in sliders
     def update_label(change):
