@@ -4,14 +4,52 @@ import torch as torch
 import ipywidgets as widgets # ideiglenes
 import utils.functional as FU
 
-def plot_waveform(x_values, waveform, title="Audio Amplitude Over Time"):
-    plt.figure(figsize=(6, 4))
-    plt.plot(x_values, waveform)
-    plt.title(title)
-    plt.xlabel("Time")
-    plt.ylabel("Amplitude")
-    plt.tight_layout() #minimize margin
-    plt.show()
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+def plot_waveform(x_values, waveform, title="Audio Amplitude Over Time", ax=None, output_frame=None):
+    """
+    Plot the waveform using a given axis or create a new figure.
+
+    Args:
+        x_values (array-like): The time values for the waveform.
+        waveform (array-like): The waveform values.
+        title (str, optional): The title for the plot. Default is "Audio Amplitude Over Time".
+        ax (matplotlib.axes.Axes, optional): The axis to plot on. If None, a new figure is created.
+        output_frame (tk.Frame, optional): Tkinter frame to embed the plot. If None, plt.show() is called.
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 4))
+
+    # Plotting on the provided axis
+    ax.plot(x_values, waveform)
+    ax.set_title(title)
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Amplitude")
+    ax.figure.tight_layout()  # Minimize margin
+
+    if output_frame:
+        # If an output_frame is provided, embed the plot into the Tkinter frame.
+        for widget in output_frame.winfo_children():
+            widget.destroy()
+
+        canvas = FigureCanvasTkAgg(ax.figure, master=output_frame)
+        canvas.draw()
+        canvas_widget = canvas.get_tk_widget()
+        canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+    else:
+        # Show the plot if no output_frame is specified
+        plt.show()
+
+
+
+# def plot_waveform(x_values, waveform, title="Audio Amplitude Over Time"):
+#     plt.figure(figsize=(6, 4))
+#     plt.plot(x_values, waveform)
+#     plt.title(title)
+#     plt.xlabel("Time")
+#     plt.ylabel("Amplitude")
+#     plt.tight_layout() #minimize margin
+#     plt.show()
 
 
 import matplotlib.pyplot as plt

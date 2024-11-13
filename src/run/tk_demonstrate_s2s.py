@@ -12,7 +12,7 @@ from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # Ensure src is in PYTHONPATH
-sys.path.insert(0, os.path.abspath('../src'))
+# sys.path.insert(0, os.path.abspath('../src'))
 
 # Project imports (assuming src is in PYTHONPATH)
 from core.AudioSample import AudioSample
@@ -29,7 +29,7 @@ from core.Spikes import Spikes
 
 # Create the main Tkinter window
 root = tk.Tk()
-root.title("Tkinter Widgets UI Example")
+root.title("Spie Generation Sensory Lab")
 root.geometry("1400x800")
 
 # Initialize AudioSample and MelSpectrogramConfig
@@ -70,6 +70,10 @@ spikes_data = Spikes(threshold=C.DEFAULT_THRESHOLD)
 # output widget or frame 
 output_audio_signal = ttk.Frame(root)
 output_audio_signal.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
+
+# Ensure the frame expands to fill available space
+root.grid_columnconfigure(0, weight=1)
+root.grid_rowconfigure(1, weight=1)
 
 # Observers for widget changes
 
@@ -124,17 +128,17 @@ def check_filter_type():
 update_button = ttk.Button(root, text="Update Plot", command=update_plot)
 update_button.grid(row=13, column=0, pady=5)
 
-# Create a Figure and Plot in the Figure Frame
-x = np.linspace(0, 10, 100)
-fig = plt.Figure(figsize=(5, 4), dpi=100)
-ax = fig.add_subplot(111)
-ax.plot(x, np.sin(x))
+# # Create a Figure and Plot in the Figure Frame
+# x = np.linspace(0, 10, 100)
+# fig = plt.Figure(figsize=(5, 4), dpi=100)
+# ax = fig.add_subplot(111)
+# ax.plot(x, np.sin(x))
 
-# Embed the figure to the Tkinter window
-canvas = FigureCanvasTkAgg(fig, master=root)
-canvas.draw()
-canvas_widget = canvas.get_tk_widget()
-canvas_widget.grid(row=0, column=1, padx=10, pady=10)
+# # Embed the figure to the Tkinter window
+# canvas = FigureCanvasTkAgg(fig, master=root)
+# canvas.draw()
+# canvas_widget = canvas.get_tk_widget()
+# canvas_widget.grid(row=0, column=1, padx=10, pady=10)
 
 # Run the main Tkinter event loop
 root.mainloop()

@@ -7,4 +7,3 @@ snntorch
 matplotlib
 soundfile
 ipywidgets
-tkinter
