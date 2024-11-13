@@ -1,6 +1,6 @@
 import ipywidgets as widgets
-import config
-import functional as FU
+import config.config as config
+import utils.functional as FU
 
 # Function to set up widgets
 def create_widgets(audio_sample, mel_config, spikes_data):

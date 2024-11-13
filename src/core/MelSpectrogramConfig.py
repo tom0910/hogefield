@@ -1,6 +1,6 @@
 import torchaudio.transforms as T
-from CustomMelScale import CustomMelScale
-from AudioSample import AudioSample
+from core.CustomMelScale import CustomMelScale
+from core.AudioSample import AudioSample
 
 class MelSpectrogramConfig:
     """

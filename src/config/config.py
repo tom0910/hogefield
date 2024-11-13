@@ -1,5 +1,5 @@
 # File related settings
-BASE_PATH = '../SpeechCommands/speech_commands_v0.02'
+BASE_PATH = 'data/GSC/SpeechCommands/speech_commands_v0.02'
 DEFAULT_DIRECTORY = 'backward'
 DEFAULT_FILE_INDEX = 0
 

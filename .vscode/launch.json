@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Module",
+            "name": "Run demonstrate_s2s.py",
             "type": "python",
             "request": "launch",
-            "module": "notebooks.test_imports", 
+            "program": "${workspaceFolder}/src/run/demonstrate_s2s.py",
             "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"

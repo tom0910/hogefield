@@ -1,9 +1,9 @@
-from CustomMelScale import CustomMelScale
+from core.CustomMelScale import CustomMelScale
 from torchaudio.transforms import Spectrogram
 from IPython.display import Audio, display
 import numpy as np
-from plotting import plot_waveform, plot_mel_spectrogram, plot_spikes, plot_mel_spectrogram_inv
-import functional as FU
+from display.plotting import plot_waveform, plot_mel_spectrogram, plot_spikes, plot_mel_spectrogram_inv
+import utils.functional as FU
 
 
 def display_audio_in_widget(audio_sample, output_widget):

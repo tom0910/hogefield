@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch as torch
 import ipywidgets as widgets # ideiglenes
-import functional as FU
+import utils.functional as FU
 
 def plot_waveform(x_values, waveform, title="Audio Amplitude Over Time"):
     plt.figure(figsize=(6, 4))

@@ -1,6 +1,6 @@
 import torch as torch
 from torchaudio.transforms import Spectrogram
-from CustomMelScale import CustomMelScale
+from core.CustomMelScale import CustomMelScale
 import torchaudio.transforms as T
 
 def get_mel_spectrogram(audio_sample, mel_config):
