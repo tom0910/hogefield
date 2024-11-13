@@ -1,9 +1,12 @@
+#widgets_setup.py
+
 import ipywidgets as widgets
 import config.config as config
 import utils.functional as FU
 
 # Function to set up widgets
 def create_widgets(audio_sample, mel_config, spikes_data):
+    print("create widget function executing ..")
     directory_dropdown = widgets.Dropdown(
         options=audio_sample.get_directories(),
         value=config.DEFAULT_DIRECTORY,

@@ -6,6 +6,7 @@ import numpy as np
 from display.plotting import plot_waveform, plot_mel_spectrogram, plot_spikes, plot_mel_spectrogram_inv
 import utils.functional as FU
 
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 def display_audio_in_widget(audio_sample, output_widget):
     """Display audio playback in the specified widget."""
@@ -21,14 +22,35 @@ def display_audio_in_widget_2(waveform, sample_rate, output_widget):
         output_widget.clear_output(wait=True)
         display(Audio(waveform.numpy(), rate=sample_rate))
 
-def plot_audio_waveform_in_widget(audio_sample, output_widget):
-    """Plot audio waveform in the specified widget."""
+# def plot_audio_waveform_in_widget(audio_sample, output_widget):
+#     """Plot audio waveform in the specified widget."""
+#     waveform, sample_rate = audio_sample.load_waveform()
+#     audio_length_in_sec = waveform.size(0) / sample_rate
+#     time = np.linspace(0, audio_length_in_sec, num=waveform.size(0))
+#     with output_widget:
+#         output_widget.clear_output(wait=True)
+#         plot_waveform(time, waveform, title="Audio Amplitude Over Time")
+
+def plot_audio_waveform_in_widget(audio_sample, output_frame):
+    """Plot audio waveform in the specified Tkinter frame."""
+    # Clear previous content in the frame
+    for widget in output_frame.winfo_children():
+        widget.destroy()
+
+    # Create the plot
     waveform, sample_rate = audio_sample.load_waveform()
     audio_length_in_sec = waveform.size(0) / sample_rate
     time = np.linspace(0, audio_length_in_sec, num=waveform.size(0))
-    with output_widget:
-        output_widget.clear_output(wait=True)
-        plot_waveform(time, waveform, title="Audio Amplitude Over Time")
+
+    fig, ax = plt.subplots(figsize=(5, 3), dpi=100)
+    ax.plot(time, waveform)
+    ax.set_title("Audio Amplitude Over Time")
+
+    # Embed the figure into the Tkinter frame using FigureCanvasTkAgg
+    canvas = FigureCanvasTkAgg(fig, master=output_frame)
+    canvas.draw()
+    canvas_widget = canvas.get_tk_widget()
+    canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
 def plot_audio_waveform_in_widget_2(waveform, sample_rate, output_widget):
     """Plot audio waveform in the specified widget."""
