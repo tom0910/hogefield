@@ -31,18 +31,20 @@ def display_audio_in_widget_2(waveform, sample_rate, output_widget):
 #         output_widget.clear_output(wait=True)
 #         plot_waveform(time, waveform, title="Audio Amplitude Over Time")
 
+import matplotlib.pyplot as plt
 
 def plot_audio_waveform_in_widget(audio_sample, output_frame):
-    # Create the plot
+    """Plot the waveform of the audio file in a Tkinter frame using existing plot_waveform."""
+    
+    # Load the waveform from the audio_sample (adjust as per your AudioSample class)
     waveform, sample_rate = audio_sample.load_waveform()
+    
+    # Calculate the time axis in seconds
     audio_length_in_sec = waveform.size(0) / sample_rate
     time = np.linspace(0, audio_length_in_sec, num=waveform.size(0))
 
-    """Plot audio waveform in the specified Tkinter frame."""
-    # Clear previous content in the frame
-    for widget in output_frame.winfo_children():
-        widget.destroy()
-        plot_waveform(time, waveform, title="Audio Amplitude Over Time")
+    plot_waveform(output_frame, time, waveform.numpy(), title="Audio Amplitude Over Time") 
+
 
 # def plot_audio_waveform_in_widget(audio_sample, output_frame):
 #     """Plot audio waveform in the specified Tkinter frame."""

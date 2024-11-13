@@ -68,18 +68,18 @@ spikes_data = Spikes(threshold=C.DEFAULT_THRESHOLD)
 ) = create_widgets(audio_sample, mel_config, spikes_data, root)
 
 # output widget or frame 
-output_audio_signal = ttk.Frame(root)
-output_audio_signal.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
+# output_audio_signal = ttk.Frame(root)
+# output_audio_signal.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 
 # Ensure the frame expands to fill available space
-root.grid_columnconfigure(0, weight=1)
-root.grid_rowconfigure(1, weight=1)
+# root.grid_columnconfigure(0, weight=1)
+# root.grid_rowconfigure(1, weight=1)
 
 # Observers for widget changes
 
 def update_plot():
     set_audio_sample_from_widget_values(audio_sample, directory_dropdown, file_slider)
-    plot_audio_waveform_in_widget(audio_sample, output_audio_signal)
+    # plot_audio_waveform_in_widget(audio_sample, output_audio_signal)
     update_plot_mel()
     polt_reverse(audio_sample, mel_config, spikes_data, output_rev_spikes, output_rev_mel, output_rev_play)
 
@@ -125,8 +125,8 @@ def check_filter_type():
     update_plot_mel()
 
 # Button to update plot
-update_button = ttk.Button(root, text="Update Plot", command=update_plot)
-update_button.grid(row=13, column=0, pady=5)
+# update_button = ttk.Button(root, text="Update Plot", command=update_plot)
+# update_button.grid(row=13, column=0, pady=5)
 
 # # Create a Figure and Plot in the Figure Frame
 # x = np.linspace(0, 10, 100)

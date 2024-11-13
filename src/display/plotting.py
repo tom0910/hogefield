@@ -1,3 +1,4 @@
+#plotting.py
 import matplotlib.pyplot as plt
 import numpy as np
 import torch as torch
@@ -6,54 +7,25 @@ import utils.functional as FU
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-def plot_waveform(x_values, waveform, title="Audio Amplitude Over Time", ax=None, output_frame=None):
-    """
-    Plot the waveform using a given axis or create a new figure.
-
-    Args:
-        x_values (array-like): The time values for the waveform.
-        waveform (array-like): The waveform values.
-        title (str, optional): The title for the plot. Default is "Audio Amplitude Over Time".
-        ax (matplotlib.axes.Axes, optional): The axis to plot on. If None, a new figure is created.
-        output_frame (tk.Frame, optional): Tkinter frame to embed the plot. If None, plt.show() is called.
-    """
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(6, 4))
-
-    # Plotting on the provided axis
+def plot_waveform(output_frame, x_values, waveform, title="Audio Amplitude Over Time"):
+    # Clear previous content in the frame
+    for widget in output_frame.winfo_children():
+        widget.destroy()
+    
+    # Create the plot using the existing plot_waveform function
+    fig, ax = plt.subplots(figsize=(10, 4))
+    
+    # Plot the waveform
     ax.plot(x_values, waveform)
     ax.set_title(title)
-    ax.set_xlabel("Time")
+    ax.set_xlabel("Time (seconds)")
     ax.set_ylabel("Amplitude")
-    ax.figure.tight_layout()  # Minimize margin
-
-    if output_frame:
-        # If an output_frame is provided, embed the plot into the Tkinter frame.
-        for widget in output_frame.winfo_children():
-            widget.destroy()
-
-        canvas = FigureCanvasTkAgg(ax.figure, master=output_frame)
-        canvas.draw()
-        canvas_widget = canvas.get_tk_widget()
-        canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-    else:
-        # Show the plot if no output_frame is specified
-        plt.show()
-
-
-
-# def plot_waveform(x_values, waveform, title="Audio Amplitude Over Time"):
-#     plt.figure(figsize=(6, 4))
-#     plt.plot(x_values, waveform)
-#     plt.title(title)
-#     plt.xlabel("Time")
-#     plt.ylabel("Amplitude")
-#     plt.tight_layout() #minimize margin
-#     plt.show()
-
-
-import matplotlib.pyplot as plt
-import torch
+    plt.tight_layout()  # Minimize margin
+    
+    # Embed the Matplotlib figure in the Tkinter frame
+    canvas = FigureCanvasTkAgg(fig, master=output_frame)  # Create a canvas widget for the figure
+    canvas.draw()  # Draw the plot
+    canvas.get_tk_widget().pack(fill="both", expand=True)  # Pack the canvas into the Tkinter frame
 
 def plot_filterbanks(filter_banks, all_freqs, f_pts, spread):
     """

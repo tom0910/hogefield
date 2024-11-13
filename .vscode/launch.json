@@ -5,7 +5,7 @@
             "name": "Run demonstrate_s2s.py",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/src/run/demonstrate_s2s.py",
+            "program": "${workspaceFolder}/src/run/tk_demonstrate_s2s.py",
             "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"

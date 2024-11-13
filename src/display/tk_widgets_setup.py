@@ -1,3 +1,4 @@
+#tk_widgets_setup
 import tkinter as tk
 from tkinter import ttk
 import config.config as config
@@ -5,16 +6,17 @@ import utils.functional as FU
 
 # Function to set up widgets using Tkinter
 def create_widgets(audio_sample, mel_config, spikes_data, root):
-    print("create_widgets function loaded")
-    # Create the main Tkinter window
-    root = tk.Tk()
-    root.title("Tkinter Widgets Setup Example")
-    root.geometry("1200x800")
+    # print("create_widgets function loaded")
+    # # Create the main Tkinter window
+    # root = tk.Tk()
+    # root.title("Tkinter Widgets Setup Example")
+    # root.geometry("1200x800")
 
     # Directory Dropdown (Combobox in Tkinter)
+    directory_dropdown_label = ttk.Label(root, text='Directory:')
     directory_dropdown = ttk.Combobox(root, values=audio_sample.get_directories())
     directory_dropdown.set(config.DEFAULT_DIRECTORY)
-    directory_dropdown_label = ttk.Label(root, text='Directory:')
+
 
     # File Index Slider
     file_slider_label = ttk.Label(root, text='File Index:')
@@ -102,7 +104,11 @@ def create_widgets(audio_sample, mel_config, spikes_data, root):
     mel_plot_radio_label = ttk.Label(root, text='Figs:')
     mel_plot_radio = ttk.Combobox(root, values=['sptrgm', 'filter'])
     mel_plot_radio.set('sptrgm')
-
+    
+    # Configure the grid columns to allow dynamic resizing
+    # root.grid_columnconfigure(0, weight=1)
+    # root.grid_columnconfigure(1, weight=1)
+    
     # Arrange widgets in a grid layout for better UI
     widgets = [
         (directory_dropdown_label, directory_dropdown),
@@ -125,6 +131,7 @@ def create_widgets(audio_sample, mel_config, spikes_data, root):
     row = 0
     for label, widget in widgets:
         label.grid(row=row, column=0, padx=5, pady=5, sticky='w')
+        
         if widget:
             widget.grid(row=row, column=1, padx=5, pady=5, sticky='w')
         row += 1
