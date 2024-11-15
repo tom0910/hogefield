@@ -1,0 +1,63 @@
+from flask import Flask, send_file, render_template_string
+from io import BytesIO
+import numpy as np
+from pydub import AudioSegment
+import torch
+
+app = Flask(__name__)
+
+# Simulated audio_sample with waveform and sample_rate
+class AudioSample:
+    def load_waveform(self):
+        # Simulate loading waveform and sample rate
+        waveform = torch.sin(torch.linspace(0, 2 * np.pi, 44100))  # Simple sine wave
+        sample_rate = 44100
+        return waveform, sample_rate
+
+# Create an instance of AudioSample
+audio_sample = AudioSample()
+
+@app.route('/')
+def index():
+    # Load waveform and sample rate
+    waveform, sample_rate = audio_sample.load_waveform()
+
+    # Convert waveform to audio file in memory
+    audio_data = waveform.numpy() * 32767  # Normalize to 16-bit PCM
+    audio_segment = AudioSegment(
+        audio_data.tobytes(), frame_rate=sample_rate, sample_width=2, channels=1
+    )
+    # Save to in-memory file (BytesIO)
+    audio_file = BytesIO()
+    audio_segment.export(audio_file, format="ogg")
+    audio_file.seek(0)  # Rewind the file pointer
+
+    # Embed the audio player in the HTML response
+    return render_template_string("""
+        <html>
+            <body>
+                <h1>Test Audio Display</h1>
+                <audio controls>
+                    <source src="/audio" type="audio/ogg">
+                    Your browser does not support the audio element.
+                </audio>
+            </body>
+        </html>
+    """)
+
+@app.route('/audio')
+def audio():
+    # Load the audio file from the in-memory file
+    waveform, sample_rate = audio_sample.load_waveform()
+    audio_data = waveform.numpy() * 32767
+    audio_segment = AudioSegment(
+        audio_data.tobytes(), frame_rate=sample_rate, sample_width=2, channels=1
+    )
+    audio_file = BytesIO()
+    audio_segment.export(audio_file, format="ogg")
+    audio_file.seek(0)  # Rewind the file pointer
+
+    return send_file(audio_file, mimetype="audio/ogg", as_attachment=True, download_name="audio.ogg")
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)  # Accessible on all network interfaces

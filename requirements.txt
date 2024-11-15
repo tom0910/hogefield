@@ -7,3 +7,7 @@ snntorch
 matplotlib
 soundfile
 ipywidgets
+ipython
+tkhtmlview
+simpleaudio
+

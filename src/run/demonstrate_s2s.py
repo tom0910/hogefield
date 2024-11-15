@@ -85,7 +85,7 @@ def beep_sound(message):
 # Observers for widget changes
 def update_plot(change):
     set_audio_sample_from_widget_values(audio_sample, directory_dropdown, file_slider)
-    display_audio_in_widget(audio_sample, output_play)
+    
     plot_audio_waveform_in_widget(audio_sample, output_audio_signal)
     update_plot_mel(None)
     polt_reverse(audio_sample, mel_config, spikes_data, output_rev_spikes, output_rev_mel, output_rev_play)
@@ -170,3 +170,4 @@ display(control_layout)
 display(figure_layout)
 display(figure_layout_2)
 display(figure_layout_3)
+display_audio_in_widget(audio_sample, output_play)

@@ -1,5 +1,4 @@
 # tk_demonstrate_s2s.py
-import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,15 +21,10 @@ from config.config import BASE_PATH, DEFAULT_DIRECTORY, DEFAULT_FILE_INDEX, DEFA
 from display.tk_widgets_setup import create_widgets
 from display.tk_display_functions import (
     display_audio_in_widget, plot_audio_waveform_in_widget,
-    plot_mel_spectrogram_in_widget, plot_spikes_in_widget, polt_reverse
+    plot_mel_spectrogram_in_widget, plot_spikes_in_widget, polt_reverse, create_plots_frame
 )
 from utils.widget_sync_utils import set_audio_sample_from_widget_values, set_mel_config_from_widget_values
 from core.Spikes import Spikes
-
-# Create the main Tkinter window
-root = tk.Tk()
-root.title("Spie Generation Sensory Lab")
-root.geometry("1400x800")
 
 # Initialize AudioSample and MelSpectrogramConfig
 audio_sample = AudioSample(BASE_PATH, DEFAULT_DIRECTORY, DEFAULT_FILE_INDEX)
@@ -46,6 +40,19 @@ mel_config = MelSpectrogramConfig(
     toggle_mel_filter="spktgrm"
 )
 spikes_data = Spikes(threshold=C.DEFAULT_THRESHOLD)
+
+# Create the main Tkinter window
+root = tk.Tk()
+root.title("Spie Generation Sensory Lab")
+root.geometry("1400x800")
+
+# Configure root grid for responsive layout
+root.columnconfigure(0, weight=0)  # Left frame fixed size
+root.columnconfigure(1, weight=1)  # Right frame expandable
+root.rowconfigure(0, weight=1)     # Make the row expandable
+
+# output_spikes
+widget_frame, out_frame_audio_wave_plt, out_frame_mel_sptgrm_plt, out_spike_raster_plt, out_rev_spike_raster_plt, out_rev_mel_sptgrm_plt,out_rev_play = create_plots_frame(root)
 
 # Create Widgets using Tkinter
 (
@@ -65,48 +72,32 @@ spikes_data = Spikes(threshold=C.DEFAULT_THRESHOLD)
     filter_choice_radio,
     mel_plot_radio,
     spk_freq_label
-) = create_widgets(audio_sample, mel_config, spikes_data, root)
-
-# output widget or frame 
-# output_audio_signal = ttk.Frame(root)
-# output_audio_signal.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
-
-# Ensure the frame expands to fill available space
-# root.grid_columnconfigure(0, weight=1)
-# root.grid_rowconfigure(1, weight=1)
+) = create_widgets(audio_sample, mel_config, spikes_data, widget_frame)
 
 # Observers for widget changes
-
 def update_plot():
     set_audio_sample_from_widget_values(audio_sample, directory_dropdown, file_slider)
-    # plot_audio_waveform_in_widget(audio_sample, output_audio_signal)
+    # display_audio_in_widget(audio_sample, output_play)
+    plot_audio_waveform_in_widget(audio_sample, out_frame_audio_wave_plt)
     update_plot_mel()
-    polt_reverse(audio_sample, mel_config, spikes_data, output_rev_spikes, output_rev_mel, output_rev_play)
-
-
-# def update_plot():
-#     set_audio_sample_from_widget_values(audio_sample, directory_dropdown, file_slider)
-#     plot_audio_waveform_in_widget(audio_sample, output_audio_signal)
-#     update_plot_mel()
-#     polt_reverse(audio_sample, mel_config, spikes_data, output_rev_spikes, output_rev_mel, output_rev_play)
-
+    polt_reverse(audio_sample, mel_config, spikes_data, out_rev_spike_raster_plt, out_rev_mel_sptgrm_plt, out_rev_play)
 
 def update_plot_mel():
     set_mel_config_from_widget_values(
         mel_config, n_fft_input, hop_length_slider, n_mels_slider,
         f_min_slider, f_max_slider, power_toggle, filter_choice_radio, mel_plot_radio
     )
-    plot_mel_spectrogram_in_widget(audio_sample, mel_config, output_melspecrogram)
+    plot_mel_spectrogram_in_widget(audio_sample, mel_config, out_frame_mel_sptgrm_plt)
     update_plot_spike()
     channel_slider.config(to=mel_config.n_mels)
-    polt_reverse(audio_sample, mel_config, spikes_data, output_rev_spikes, output_rev_mel, output_rev_play)
+    polt_reverse(audio_sample, mel_config, spikes_data, out_rev_spike_raster_plt, out_rev_mel_sptgrm_plt, out_rev_play)
 
 
 def update_plot_spike():
     spikes_data.threshold = float(threshold_slider.get())
     plot_radio = spike_plot_radio.get()
-    plot_spikes_in_widget(audio_sample, mel_config, spikes_data, plot_radio, output_spikes)
-    polt_reverse(audio_sample, mel_config, spikes_data, output_rev_spikes, output_rev_mel, output_rev_play)
+    plot_spikes_in_widget(audio_sample, mel_config, spikes_data, plot_radio, out_spike_raster_plt)
+    polt_reverse(audio_sample, mel_config, spikes_data, out_rev_spike_raster_plt, out_rev_mel_sptgrm_plt, out_rev_play)
 
 
 def check_filter_type():
@@ -124,21 +115,10 @@ def check_filter_type():
         n_mels_slider.config(state=tk.NORMAL)
     update_plot_mel()
 
-# Button to update plot
-# update_button = ttk.Button(root, text="Update Plot", command=update_plot)
-# update_button.grid(row=13, column=0, pady=5)
-
-# # Create a Figure and Plot in the Figure Frame
-# x = np.linspace(0, 10, 100)
-# fig = plt.Figure(figsize=(5, 4), dpi=100)
-# ax = fig.add_subplot(111)
-# ax.plot(x, np.sin(x))
-
-# # Embed the figure to the Tkinter window
-# canvas = FigureCanvasTkAgg(fig, master=root)
-# canvas.draw()
-# canvas_widget = canvas.get_tk_widget()
-# canvas_widget.grid(row=0, column=1, padx=10, pady=10)
+# Initial display setup
+update_plot()
+# update_plot_mel()
+# update_plot_spike()
 
 # Run the main Tkinter event loop
 root.mainloop()
