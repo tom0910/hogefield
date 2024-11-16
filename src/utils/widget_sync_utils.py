@@ -8,6 +8,7 @@ def set_mel_config_from_widget_values(mel_config, n_fft_input, hop_length_slider
     # mel_config.refresh_audio_sample_rate()
     # mel_config.n_fft = int(n_fft_input.get())
     # mel_config.hop_length = int(hop_length_slider.get())
+    print("pwtgle:",power_toggle.get())
     mel_config.update_from_widgets(
         n_fft=int(n_fft_input.get()),
         hop_length=int(hop_length_slider.get()),

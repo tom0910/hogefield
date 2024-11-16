@@ -4,6 +4,30 @@ from tkinter import ttk
 import config.config as config
 import utils.functional as FU
 
+class PowerToggle:
+    def __init__(self, parent, variable, label_text="select=>"):
+        self.var = variable
+        self.label = ttk.Label(parent, text=label_text)
+        self.radio_power = ttk.Radiobutton(parent, text="Power", value=2.0, variable=self.var)
+        self.radio_magnitude = ttk.Radiobutton(parent, text="Magnitude", value=1.0, variable=self.var)
+
+    def grid(self, row, column, **kwargs):
+        self.label.grid(row=row, column=column, **kwargs)
+        self.radio_power.grid(row=row, column=column + 1, **kwargs)
+        self.radio_magnitude.grid(row=row, column=column + 2, **kwargs)
+
+    def get(self):
+        return self.var.get()
+
+    def set(self, value):
+        self.var.set(float(value))
+
+    def bind(self, callback):
+        if callback is not None:
+            self.var.trace_add("write", lambda *args: callback())
+        else:
+            raise ValueError("Callback function cannot be None")
+
 # Function to set up widgets using Tkinter
 def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     # print("create_widgets function loaded")
@@ -17,7 +41,6 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     directory_dropdown = ttk.Combobox(widget_frame, values=audio_sample.get_directories())
     directory_dropdown.set(config.DEFAULT_DIRECTORY)
 
-
     # File Index Slider
     file_slider_label = ttk.Label(widget_frame, text='File Index:')
     file_slider = tk.Scale(widget_frame, from_=0, to=len(audio_sample.get_files()) - 1, orient='horizontal')
@@ -27,15 +50,18 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     n_fft_input = ttk.Entry(widget_frame)
     n_fft_input.insert(0, int(config.DEFAULT_N_FFT))
 
-    # Hop Length Slider
+    
+    hop_length_var = tk.IntVar(value=config.DEFAULT_HOP_LENGTH)
     hop_length_label = ttk.Label(widget_frame, text='Hop Length:')
-    hop_length_slider = tk.Scale(widget_frame, from_=1, to=512, orient='horizontal')
-    hop_length_slider.set(config.DEFAULT_HOP_LENGTH)
+    hop_length_slider = tk.Scale(widget_frame, from_=1, to=512, orient='horizontal', variable=hop_length_var)
+    hop_length_entry = ttk.Entry(widget_frame, textvariable=hop_length_var, width=5)
 
-    # Number of Mel Bands Slider
+    # Number of Mel Bands Slider    
+    n_mels_var = tk.IntVar(value=config.DEFAULT_N_MELS)
     n_mels_label = ttk.Label(widget_frame, text='n_mels:')
-    n_mels_slider = tk.Scale(widget_frame, from_=2, to=22, orient='horizontal')
-    n_mels_slider.set(config.DEFAULT_N_MELS)
+    n_mels_slider = tk.Scale(widget_frame, from_=1, to=22, orient='horizontal', variable=n_mels_var)
+    n_mels_entry = ttk.Entry(widget_frame, textvariable=n_mels_var, width=5)    
+
 
     # f_min Slider
     f_min_label = ttk.Label(widget_frame, text='f_min:')
@@ -47,10 +73,27 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     f_max_slider = tk.Scale(widget_frame, from_=8000, to=16000, resolution=100, orient='horizontal')
     f_max_slider.set(config.DEFAULT_F_MAX)
 
-    # Power Dropdown (Combobox)
-    power_label = ttk.Label(widget_frame, text='Power:')
-    power_toggle = ttk.Combobox(widget_frame, values=[("Power", 2.0), ("Magnitude", 1.0)])
-    power_toggle.set(config.DEFAULT_POWER)
+    # Create PowerToggle with DoubleVar
+    power_label = ttk.Label(widget_frame, text='Power or Magnitude:')
+    power_var = tk.DoubleVar()  # Use DoubleVar to ensure float handling
+    power_var.set(2.0 if config.DEFAULT_POWER == 2.0 else 1.0)  # Set the default value
+    power_toggle = PowerToggle(widget_frame, power_var)    
+    
+    # power_var = tk.StringVar(value="Power" if config.DEFAULT_POWER == 2.0 else "Magnitude")
+    # power_label = ttk.Label(widget_frame, text='Power:')
+
+    # # Power Radio Buttons
+    # power_radio_power = ttk.Radiobutton(widget_frame, text="Power", value="Power", variable=power_var)
+    # power_radio_magnitude = ttk.Radiobutton(widget_frame, text="Magnitude", value="Magnitude", variable=power_var)
+
+    # # Observing changes in power_var
+    # power_var.trace_add("write", lambda *args: update_plot_mel())
+
+    # power_label = ttk.Label(widget_frame, text='Power:')
+    # power_toggle = ttk.Combobox(widget_frame, values=[("Power", 2.0), ("Magnitude", 1.0)])
+    # power_toggle.set(config.DEFAULT_POWER)
+    
+    
 
     # Threshold Slider
     threshold_label = ttk.Label(widget_frame, text='Threshold:')
@@ -104,41 +147,104 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     mel_plot_radio_label = ttk.Label(widget_frame, text='Figs:')
     mel_plot_radio = ttk.Combobox(widget_frame, values=['sptrgm', 'filter'])
     mel_plot_radio.set('sptrgm')
-    
-    # Configure the grid columns to allow dynamic resizing
-    # widget_frame.grid_columnconfigure(0, weight=1)
-    # widget_frame.grid_columnconfigure(1, weight=1)
-    
+        
+        
     # Arrange widgets in a grid layout for better UI
     widgets = [
-        (directory_dropdown_label, directory_dropdown),
-        (file_slider_label, file_slider),
-        (n_fft_label, n_fft_input),
-        (hop_length_label, hop_length_slider),
-        (n_mels_label, n_mels_slider),
-        (f_min_label, f_min_slider),
-        (f_max_label, f_max_slider),
-        (power_label, power_toggle),
-        (threshold_label, threshold_slider),
-        (spike_plot_radio_label, spike_plot_radio),
-        (spike_period_slider_label, spike_periode_slider),
-        (channel_slider_label, channel_slider),
-        (spk_freq_label, None),
-        (filter_choice_label, filter_choice_radio),
-        (mel_plot_radio_label, mel_plot_radio)
+        (directory_dropdown_label, directory_dropdown,None),
+        (file_slider_label, file_slider, None),
+        (n_fft_label, n_fft_input, None),
+        (hop_length_label, hop_length_slider,  hop_length_entry),
+        (n_mels_label, n_mels_slider, n_mels_entry),
+        (f_min_label, f_min_slider, None),
+        (f_max_label, f_max_slider, None),
+        (power_label, power_toggle, None),
+        (threshold_label, threshold_slider, None),
+        (spike_plot_radio_label, spike_plot_radio, None),
+        (spike_period_slider_label, spike_periode_slider, None),
+        (channel_slider_label, channel_slider, None),
+        (spk_freq_label, None,None),
+        (filter_choice_label, filter_choice_radio, None),
+        (mel_plot_radio_label, mel_plot_radio, None)
     ]
 
     row = 0
-    for label, widget in widgets:
+    for label, widget, entry in widgets:
         label.grid(row=row, column=0, padx=5, pady=5, sticky='w')
         
         if widget:
             widget.grid(row=row, column=1, padx=5, pady=5, sticky='w')
+        if entry:
+            entry.grid(row=row, column=2, padx=5, pady=5, sticky='w')
         row += 1
 
     return (
         directory_dropdown, file_slider, n_fft_input, hop_length_slider, 
         n_mels_slider, f_min_slider, f_max_slider, power_toggle, 
         threshold_slider, spike_plot_radio, spike_periode_slider, 
-        spk_freq_label, channel_slider, filter_choice_radio, mel_plot_radio, spk_freq_label
+        spk_freq_label, channel_slider, filter_choice_radio, mel_plot_radio, spk_freq_label,
+        hop_length_entry, n_mels_entry
     )
+    
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
+def initialize_plots(frames, figsize=(4, 4)):
+    """
+    Initializes figures, axes, and canvases for multiple plots.
+    
+    Args:
+        frames (list): List of Tkinter frames where plots will be embedded.
+        figsize (tuple): Size of the Matplotlib figures.
+
+    Returns:
+        tuple: A list of figures, axes, and canvases.
+    """
+    figs, axes, canvases = [], [], []
+    
+    for frame in frames:
+        fig = Figure(figsize=figsize)
+        ax = fig.add_subplot(111)
+        
+        # Initialize _colorbar attribute for each axis
+        ax._colorbar = None
+        
+        canvas = FigureCanvasTkAgg(fig, master=frame)
+        canvas.get_tk_widget().pack(fill="both", expand=True)
+
+        figs.append(fig)
+        axes.append(ax)
+        canvases.append(canvas)
+    
+    return figs, axes, canvases
+
+# Create the plots frame without embedding the waveform plot
+def create_plots_frame(root):
+    
+    # Create a frame for widgets (left side)
+    widget_frame = ttk.Frame(root, padding=10, relief="ridge")
+    widget_frame.grid(row=0, column=0, sticky="ns")  # Left-side frame
+        
+    # Create a frame for the plots
+    plot_frame = ttk.Frame(root, padding=10, relief="sunken")
+    plot_frame.grid(row=0, column=1, sticky="nsew")
+
+    # Define 2x3 grid
+    subframes = [ttk.Frame(plot_frame) for _ in range(6)]
+    for idx, frame in enumerate(subframes):
+        row, col = divmod(idx, 3)
+        frame.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
+        
+    # Set grid weights for dynamic resizing
+    for i in range(2):  # Two rows
+        plot_frame.rowconfigure(i, weight=1)
+    for i in range(3):  # Three columns
+        plot_frame.columnconfigure(i, weight=1)        
+    
+    out_audio_wave_plt = subframes[0]  
+    out_mel_sptgrm_plt = subframes[1]  
+    out_spike_raster_plt = subframes[2]
+    out_rev_spike_raster_plt = subframes[3]
+    out_rev_mel_sptgrm_plt = subframes[4]  
+    out_rev_play = subframes[5] 
+    return widget_frame, out_audio_wave_plt, out_mel_sptgrm_plt, out_spike_raster_plt, out_rev_spike_raster_plt, out_rev_mel_sptgrm_plt, out_rev_play  
