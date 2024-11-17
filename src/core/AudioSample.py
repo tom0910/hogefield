@@ -108,6 +108,7 @@ class AudioSample:
         files = self.get_files()  # Uses get_files for modularity
         wav_file_path = os.path.join(directory_path, files[self.file_index])
         waveform, sample_rate = torchaudio.load(wav_file_path)
+        # print(f"shape of waveform: {wav_file_path.shape}")
         return waveform.squeeze(), sample_rate
 
     def get_files(self):

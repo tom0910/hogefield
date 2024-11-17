@@ -45,10 +45,10 @@ class MelSpectrogramConfig:
             T.MelSpectrogram: A Mel spectrogram transform from torchaudio.transforms.
         """
         return T.MelSpectrogram(
+            n_mels=self.n_mels,
             sample_rate=self.sample_rate,
             n_fft=self.n_fft,
             hop_length=self.hop_length,
-            n_mels=self.n_mels,
             f_min=self.f_min,
             f_max=self.f_max,
             power=self.power
@@ -63,12 +63,30 @@ class MelSpectrogramConfig:
         return CustomMelScale(
             n_mels=self.n_mels,
             sample_rate=self.sample_rate,
+            n_stft=self.n_fft // 2 + 1,  # Equivalent to the number of frequency bins
             f_min=self.f_min,
             f_max=self.f_max,
-            n_stft=self.n_fft // 2 + 1,  # Equivalent to the number of frequency bins
-            # mel_scale=self.filter_type  # Pass filter type to custom transform
             filter_type=self.filter_type
         )
+
+    def debug_transform(self, waveform):
+        """
+        Debug and log details of the transform.
+        Args:
+            waveform (torch.Tensor): The waveform to process.
+        """
+        transform = self.get_transform()
+        
+        # Debugging the filter bank for custom transforms
+        if self.filter_type == "custom" and isinstance(transform, CustomMelScale):
+            print(f"Custom Filter Bank Shape: {transform.fb.shape}")
+            print(f"Filter Center Frequencies: {transform.f_pts}")
+            print(f"Frequency Spread: {transform.spread}")
+
+        # Debugging the Mel spectrogram output
+        mel_spectrogram = transform(waveform)
+        print(f"Mel Spectrogram Shape: {mel_spectrogram.shape}")
+        return mel_spectrogram
 
     def get_transform(self):
         """

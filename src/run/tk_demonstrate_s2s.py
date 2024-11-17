@@ -35,7 +35,7 @@ mel_config = MelSpectrogramConfig(
     f_min=C.DEFAULT_F_MIN,
     f_max=C.DEFAULT_F_MAX,
     power=C.DEFAULT_POWER,
-    filter_type="custom",
+    filter_type=C.DEFAULT_FILTER_CHOICE,
     toggle_mel_filter="spktgrm"
 )
 spikes_data = Spikes(threshold=C.DEFAULT_THRESHOLD)
@@ -79,8 +79,9 @@ figs, axes, canvases = initialize_plots(frames)
     spike_periode_slider,
     spk_freq_label,
     channel_slider,
-    filter_choice_radio,
-    mel_plot_radio,
+    filter_choice_widget,
+    mel_filter_plot_radio_widget,
+    # mel_plot_radio,
     spk_freq_label,
     hop_length_entry,
     n_mels_entry
@@ -96,9 +97,14 @@ def update_plot():
     # polt_reverse(audio_sample, mel_config, spikes_data, out_rev_spike_raster_plt, out_rev_mel_sptgrm_plt, out_rev_play)
 
 def update_plot_mel():
+    print("update_plot_mel triggered")
     set_mel_config_from_widget_values(
         mel_config, n_fft_input, hop_length_slider, n_mels_slider, f_min_slider, f_max_slider, 
-        power_toggle, filter_choice_radio, mel_plot_radio
+        power_toggle, 
+        filter_choice_widget,
+        # filter_choice_radio,
+        mel_filter_plot_radio_widget 
+        # mel_plot_radio
     )
     mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale = mel_spctgrm_calc(audio_sample, mel_config)
     plot_mel_spectrogram(mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale, canvases[1], axes[1])
@@ -118,7 +124,8 @@ def update_plot_spike():
 
 def check_filter_type():
     """Set widget values and disable state based on filter choice."""
-    if filter_choice_radio.get() == "custom":
+    print("check_filter_type triggered")
+    if filter_choice_widget.get() == "custom":
         f_min_slider.set(275)
         f_max_slider.set(7625)
         n_mels_slider.set(16)
@@ -145,11 +152,15 @@ n_mels_slider.config(command=lambda v: update_plot_mel())
 n_mels_entry.bind('<Return>',lambda event: update_plot_mel())
 # setting betwen power and magnitude
 power_toggle.bind(update_plot_mel)
+# observer that should change filter type in sptgrm
+filter_choice_widget.bind(check_filter_type)
+# observer to change canvas btwn spectrogram and filter type used 
+mel_filter_plot_radio_widget.bind(update_plot_mel)
 
 f_min_slider.config(command=lambda v: update_plot_mel())
 f_max_slider.config(command=lambda v: update_plot_mel())
 threshold_slider.config(command=lambda v: update_plot_spike())
-# filter_choice_radio.config(command=check_filter_type)
+
     
 
 # Initial display setup

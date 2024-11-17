@@ -4,6 +4,48 @@ from tkinter import ttk
 import config.config as config
 import utils.functional as FU
 
+class ChoiceWidget:
+    def __init__(self, parent, variable, label_text="Select:", options=None):
+        if options is None:
+            options = []  # Default to an empty list if no options are provided
+        if not isinstance(options, list) or len(options) < 2:
+            raise ValueError("`options` must be a list with at least two choices.")
+
+        self.var = variable
+        self.label = ttk.Label(parent, text=label_text)
+        self.radio_buttons = [
+            ttk.Radiobutton(parent, text=label, value=value, variable=self.var)
+            for label, value in options
+        ]
+
+    def grid(self, row, column, **kwargs):
+        self.label.grid(row=row, column=column, **kwargs)
+        for i, radio in enumerate(self.radio_buttons):
+            radio.grid(row=row, column=column + 1 + i, **kwargs)
+
+    def get(self):
+        return self.var.get()
+
+    def set(self, value):
+        self.var.set(value)
+
+    def bind(self, callback):
+        if callback is not None:
+            self.var.trace_add("write", lambda *args: callback())
+        else:
+            raise ValueError("Callback function cannot be None")
+    # usage:
+    # Accepts any number of options as a list of tuples (label, value)
+    # mode_var = tk.StringVar(value="Mode A")
+    # mode_widget = ChoiceWidget(
+    #     parent=widget_frame,
+    #     variable=mode_var,
+    #     label_text="Select Mode:",
+    #     options=[("Mode A", "A"), ("Mode B", "B"), ("Mode C", "C")]
+    # )
+    # mode_widget.grid(row=1, column=0, padx=5, pady=5)
+
+
 class PowerToggle:
     def __init__(self, parent, variable, label_text="select=>"):
         self.var = variable
@@ -27,6 +69,13 @@ class PowerToggle:
             self.var.trace_add("write", lambda *args: callback())
         else:
             raise ValueError("Callback function cannot be None")
+        
+    # def bind(self, callback):
+    #     """Bind an observer (callback) to the variable."""
+    #     if callback is not None:
+    #         self.var.trace_add("write", lambda *args: callback(self.get()))
+    #     else:
+    #         raise ValueError("Callback function cannot be None")        
 
 # Function to set up widgets using Tkinter
 def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
@@ -79,22 +128,33 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     power_var.set(2.0 if config.DEFAULT_POWER == 2.0 else 1.0)  # Set the default value
     power_toggle = PowerToggle(widget_frame, power_var)    
     
-    # power_var = tk.StringVar(value="Power" if config.DEFAULT_POWER == 2.0 else "Magnitude")
-    # power_label = ttk.Label(widget_frame, text='Power:')
-
-    # # Power Radio Buttons
-    # power_radio_power = ttk.Radiobutton(widget_frame, text="Power", value="Power", variable=power_var)
-    # power_radio_magnitude = ttk.Radiobutton(widget_frame, text="Magnitude", value="Magnitude", variable=power_var)
-
-    # # Observing changes in power_var
-    # power_var.trace_add("write", lambda *args: update_plot_mel())
-
-    # power_label = ttk.Label(widget_frame, text='Power:')
-    # power_toggle = ttk.Combobox(widget_frame, values=[("Power", 2.0), ("Magnitude", 1.0)])
-    # power_toggle.set(config.DEFAULT_POWER)
+    # Filter Choice Radio Button
+    # filter_choice_label = ttk.Label(widget_frame, text='filter used:')
+    # filter_choice_radio = ttk.Combobox(widget_frame, values=['standard', 'custom'])
+    # filter_choice_radio.set('standard')
+        
+    filter_choice_var = tk.StringVar(value=config.DEFAULT_FILTER_CHOICE)
+    filter_choice_widget = ChoiceWidget(
+        parent=widget_frame,
+        variable=filter_choice_var,
+        label_text="Select Mode:",
+        options=[("standard", config.FILTER_VALUE1), ("custom", config.FILTER_VALUE2)]
+    )    
     
     
-
+    # Mel Plot Radio Button
+    # mel_plot_radio_label = ttk.Label(widget_frame, text='Figs:')
+    # mel_plot_radio = ttk.Combobox(widget_frame, values=['sptrgm', 'filter'])
+    # mel_plot_radio.set('sptrgm')
+    # Accepts any number of options as a list of tuples (label, value)
+    mel_filter_plot_var = tk.StringVar(value=config.DEFAULT_FILTER_SPCTRGRM_PLT_CHOICE)
+    mel_filter_plot_radio_widget = ChoiceWidget(
+        parent=widget_frame,
+        variable=mel_filter_plot_var,
+        label_text="Select Plot Type:",
+        options=[("spectrogram", config.DEFAULT_SPCTRGRM_PLT), ("filter", config.DEFAULT_FILTER_PLT)]
+    )
+    
     # Threshold Slider
     threshold_label = ttk.Label(widget_frame, text='Threshold:')
     threshold_slider = tk.Scale(widget_frame, from_=0, to=1, resolution=0.01, orient='horizontal')
@@ -137,17 +197,6 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     spike_periode_slider.config(command=lambda _: update_label())
     channel_slider.config(command=lambda _: update_label())
     hop_length_slider.config(command=lambda _: update_label())
-
-    # Filter Choice Radio Button
-    filter_choice_label = ttk.Label(widget_frame, text='filter used:')
-    filter_choice_radio = ttk.Combobox(widget_frame, values=['standard', 'custom'])
-    filter_choice_radio.set('standard')
-
-    # Mel Plot Radio Button
-    mel_plot_radio_label = ttk.Label(widget_frame, text='Figs:')
-    mel_plot_radio = ttk.Combobox(widget_frame, values=['sptrgm', 'filter'])
-    mel_plot_radio.set('sptrgm')
-        
         
     # Arrange widgets in a grid layout for better UI
     widgets = [
@@ -164,8 +213,9 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
         (spike_period_slider_label, spike_periode_slider, None),
         (channel_slider_label, channel_slider, None),
         (spk_freq_label, None,None),
-        (filter_choice_label, filter_choice_radio, None),
-        (mel_plot_radio_label, mel_plot_radio, None)
+        (filter_choice_widget,None,None),
+        (mel_filter_plot_radio_widget,None,None)
+        # (mel_plot_radio_label, mel_plot_radio, None)
     ]
 
     row = 0
@@ -182,7 +232,11 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
         directory_dropdown, file_slider, n_fft_input, hop_length_slider, 
         n_mels_slider, f_min_slider, f_max_slider, power_toggle, 
         threshold_slider, spike_plot_radio, spike_periode_slider, 
-        spk_freq_label, channel_slider, filter_choice_radio, mel_plot_radio, spk_freq_label,
+        spk_freq_label, channel_slider, filter_choice_widget,
+        # filter_choice_radio, 
+        # mel_plot_radio,
+        mel_filter_plot_radio_widget, 
+        spk_freq_label,
         hop_length_entry, n_mels_entry
     )
     

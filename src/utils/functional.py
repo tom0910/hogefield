@@ -8,10 +8,13 @@ def get_mel_spectrogram(audio_sample, mel_config):
     Compute the mel spectrogram using the filter type specified in mel_config.
     """
     waveform, sample_rate = audio_sample.load_waveform()
+
+    #debug:
+    # mel_spectrogram = mel_config.debug_transform(waveform)        
     
     # Apply Spectrogram transformation first, then use CustomMelScale for filtering
-    spectrogram_transform = Spectrogram(n_fft=mel_config.n_fft, hop_length=mel_config.hop_length)
-    spectrogram = spectrogram_transform(waveform)
+    spectrogram_transform = Spectrogram(n_fft=mel_config.n_fft, hop_length=mel_config.hop_length, power=mel_config.power)
+    spectrogram = spectrogram_transform(waveform)    
 
     # Initialize CustomMelScale with the filter type and configuration
     custom_mel_scale = CustomMelScale(
@@ -23,7 +26,7 @@ def get_mel_spectrogram(audio_sample, mel_config):
         filter_type=mel_config.filter_type
     )
 
-    # Apply the CustomMelScale transformation to the spectrogram
+    # # Apply the CustomMelScale transformation to the spectrogram
     mel_spectrogram = custom_mel_scale(spectrogram)
     
     return mel_spectrogram, sample_rate, custom_mel_scale

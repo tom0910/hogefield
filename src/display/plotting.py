@@ -23,38 +23,15 @@ def plot_waveform(x_values, waveform, canvas, ax):
     # Redraw the canvas with updated data
     canvas.draw()
 
-# def plot_waveform(output_frame, x_values, waveform, title="Audio Amplitude Over Time"):
-#     # Clear previous content in the frame
-#     # for widget in output_frame.winfo_children():
-#     #     widget.destroy()
-    
-#     # Create the Figure and Axes directly
-#     fig = Figure(figsize=(4, 4))
-#     ax = fig.add_subplot(111)
-    
-#     ax.clear()  # Clear the axes for fresh content
-    
-#     # Plot the waveform
-#     ax.plot(x_values, waveform)
-#     ax.set_title(title)
-#     ax.set_xlabel("Time (seconds)")
-#     ax.set_ylabel("Amplitude")
-#     fig.tight_layout()  # Minimize margin
-    
-#     # Embed the Matplotlib figure in the Tkinter frame
-#     canvas = FigureCanvasTkAgg(fig, master=output_frame)  # Create a canvas widget for the figure
-#     canvas.draw()  # Draw the plot
-#     canvas.get_tk_widget().pack(fill="both", expand=True)  # Pack the canvas into the Tkinter frame
-#     canvas.draw()  # Redraw the canvas
-
-
 def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom_mel_scale, canvas, ax):
     # Ensure `_colorbar` exists as a default attribute
     if not hasattr(ax, "_colorbar"):
         ax._colorbar = None
 
+    ax.clear()            
+            
     mel_spec = mel_spec.squeeze().numpy()
-    num_mel_bins = mel_spec.shape[0]    
+    num_mel_bins = mel_spec.shape[0]
 
     yticks = np.arange(1, num_mel_bins + 1)
     time_axis = mel_spec.shape[-1]
@@ -65,13 +42,16 @@ def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom
 
     total_samples = int(time_axis)
 
-    # Clear the axes and remove the colorbar if it exists
-    ax.clear()
-    if ax._colorbar:
-        # ax._colorbar.remove()
-        ax._colorbar.ax.clear()  # Clear the colorbar axes direct
-        ax._colorbar.remove()
-        ax._colorbar = None
+    # Show the colorbar
+    toggle_colorbar_visibility(ax, visible=True)
+    
+    # Update or plot the spectrogram without clearing the axes
+    if ax.images:
+        # Update the existing image
+        ax.images[0].set_data(mel_spec)
+    else:
+        # Add a new image
+        img = ax.imshow(mel_spec, aspect="auto", origin="lower", vmin=None, vmax=None)
 
     if mel_config.toggle_mel_filter == "sptrgm":
         img = ax.imshow(mel_spec, aspect="auto", origin="lower", vmin=None, vmax=None)
@@ -83,13 +63,18 @@ def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom
         ax.set_yticklabels(yticks)
         ax.set_ylabel("Mel Bins", fontsize=10)
 
-        # Add a new colorbar
-        cbar = ax.figure.colorbar(img, ax=ax, orientation="vertical", format="%0.1f")
-        cbar.set_ticks(np.arange(0, 1.1, 0.1))
-        ax._colorbar = cbar  # Track the new colorbar
-        
+        # Handle the colorbar
+        if ax._colorbar:
+            # Update the colorbar's data
+            ax._colorbar.update_normal(img)
+        else:
+            # Add a new colorbar
+            cbar = ax.figure.colorbar(img, ax=ax, orientation="vertical", format="%0.1f")
+            cbar.set_ticks(np.arange(0, 1.1, 0.1))
+            ax._colorbar = cbar
+
         ax.annotate(
-            f"Total Samples: {total_samples}",
+            f"Total Samples: {int(time_axis)}",
             xy=(0.5, -0.2),
             xycoords="axes fraction",
             ha="center",
@@ -97,227 +82,139 @@ def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom
         )
         for ytick in yticks - 1:
             ax.axhline(y=ytick + 0.5, color="orange", linestyle=":", linewidth=1.5)
-
+        
+        # Redraw the canvas
+        # ax.figure.tight_layout()
+        canvas.draw()
+        
     elif mel_config.toggle_mel_filter == "filter":
+        # print(f"Before removal: {ax._colorbar}")
+        toggle_colorbar_visibility(ax, visible=False)
+        # if not hasattr(ax, "_colorbar"):
+        #     ax._colorbar.ax.remove()
+        #     ax._colorbar = None
+            
+        # Safely remove the colorbar
+        # safely_remove_colorbar(ax)
+        # hide_colorbar(ax)            
+        
+        # Clear the current Axes
+        # print(f"After removal: {ax._colorbar}")
         ax.clear()
+
+        # Plot the filter banks
         plot_filterbanks(
             custom_mel_scale.fb,
             custom_mel_scale.all_freqs,
             custom_mel_scale.f_pts,
             custom_mel_scale.spread,
+            canvas, ax
         )
-
-    canvas.draw()
-
-
-
-# def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom_mel_scale, canvas, ax):
-#     mel_spec = mel_spec.squeeze().numpy()
-#     num_mel_bins = mel_spec.shape[0]
-
-#     yticks = np.arange(1, num_mel_bins + 1)
-#     time_axis = mel_spec.shape[-1]
-#     x_ticks = np.linspace(0, time_axis - 1, 4)
-#     x_ticks = np.round(x_ticks).astype(int)
-#     hop_length = mel_config.hop_length
-#     x_tick_labels = [f'{(tick * hop_length) / sample_rate:.2f}' for tick in x_ticks]
-
-#     total_samples = int(time_axis)
-
-#     # Clear the axes and remove the colorbar if it exists
-#     ax.clear()
-#     if hasattr(ax, "_colorbar") and ax._colorbar:
-#         try:
-#             ax._colorbar.remove()
-#         except AttributeError:
-#             pass  # Safeguard against any detached colorbar issues
-#         ax._colorbar = None
-
-#     if mel_config.toggle_mel_filter == "sptrgm":
-#         img = ax.imshow(mel_spec, aspect="auto", origin="lower", vmin=None, vmax=None)
-#         ax.set_title(f"Mel Spectrogram - {audio_sample.selected_directory}", fontsize=12)
-#         ax.set_xticks(x_ticks)
-#         ax.set_xticklabels(x_tick_labels)
-#         ax.set_xlabel("Time [sec]", fontsize=10)
-#         ax.set_yticks(yticks - 1)
-#         ax.set_yticklabels(yticks)
-#         ax.set_ylabel("Mel Bins", fontsize=10)
-
-#         # Add a new colorbar and safely associate it with the axes
-#         cbar = ax.figure.colorbar(img, ax=ax, orientation="vertical", format="%0.1f")
-#         cbar.set_ticks(np.arange(0, 1.1, 0.1))
-#         ax._colorbar = cbar  # Explicitly attach the colorbar to the axes
-
-#         ax.annotate(
-#             f"Total Samples: {total_samples}",
-#             xy=(0.5, -0.2),
-#             xycoords="axes fraction",
-#             ha="center",
-#             fontsize=12,
-#         )
-#         for ytick in yticks - 1:
-#             ax.axhline(y=ytick + 0.5, color="orange", linestyle=":", linewidth=1.5)
-
-#     elif mel_config.toggle_mel_filter == "filter":
-#         ax.clear()
-#         plot_filterbanks(
-#             custom_mel_scale.fb,
-#             custom_mel_scale.all_freqs,
-#             custom_mel_scale.f_pts,
-#             custom_mel_scale.spread,
-#         )
-#     canvas.draw()
-
-
-
-
-# def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom_mel_scale, canvas, ax):
-#     mel_spec = mel_spec.squeeze().numpy()
-#     num_mel_bins = mel_spec.shape[0]
-
-#     yticks = np.arange(1, num_mel_bins + 1)
-#     time_axis = mel_spec.shape[-1]
-#     x_ticks = np.linspace(0, time_axis - 1, 4)
-#     x_ticks = np.round(x_ticks).astype(int)
-#     hop_length = mel_config.hop_length
-#     x_tick_labels = [f'{(tick * hop_length) / sample_rate:.2f}' for tick in x_ticks]
-
-#     total_samples = int(time_axis)
-
-#     ax.clear()
-    
-#     if hasattr(ax, '_colorbar'):
-#         ax._colorbar.remove()
-#         del ax._colorbar
-
-#     if mel_config.toggle_mel_filter == "sptrgm":
-#         img = ax.imshow(mel_spec, aspect='auto', origin='lower', vmin=None, vmax=None)
-#         ax.set_title(f'Mel Spectrogram - {audio_sample.selected_directory}', fontsize=12)
-#         ax.set_xticks(x_ticks)
-#         ax.set_xticklabels(x_tick_labels)
-#         ax.set_xlabel('Time [sec]', fontsize=10)
-#         ax.set_yticks(yticks - 1)
-#         ax.set_yticklabels(yticks)
-#         ax.set_ylabel('Mel Bins', fontsize=10)
-
-#         cbar = ax.figure.colorbar(img, ax=ax, orientation='vertical', format="%0.1f")
-#         cbar.set_ticks(np.arange(0, 1.1, 0.1))
-#         ax.annotate(
-#             f'Total Samples: {total_samples}',
-#             xy=(0.5, -0.2),
-#             xycoords='axes fraction',
-#             ha='center',
-#             fontsize=12
-#         )
-#         for ytick in yticks - 1:
-#             ax.axhline(y=ytick + 0.5, color='orange', linestyle=':', linewidth=1.5)
-
-#     elif mel_config.toggle_mel_filter == "filter":
-#         plot_filterbanks(
-#             custom_mel_scale.fb,
-#             custom_mel_scale.all_freqs,
-#             custom_mel_scale.f_pts,
-#             custom_mel_scale.spread
-#         )
-
-#     canvas.draw()
-
-
-# from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-# from matplotlib.figure import Figure
-# import numpy as np
-
-# def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom_mel_scale, output_frame):
-#     mel_spec = mel_spec.squeeze().numpy()  # Convert to numpy for easier manipulation
-#     num_mel_bins = mel_spec.shape[0]
-    
-#     # Y-axis ticks for Mel bins
-#     yticks = np.arange(1, num_mel_bins + 1)
-    
-#     # X-axis ticks for time
-#     time_axis = mel_spec.shape[-1]
-#     x_ticks = np.linspace(0, time_axis - 1, 4)
-#     x_ticks = np.round(x_ticks).astype(int)
-#     hop_length = mel_config.hop_length  # Retrieve hop_length from mel_config
-#     x_tick_labels = [f'{(tick * hop_length) / sample_rate:.2f}' for tick in x_ticks]
-
-#     total_samples = int(time_axis)
-
-#     # Clear previous content in the frame
-#     for widget in output_frame.winfo_children():
-#         widget.destroy()   
-    
-#     # Create the Figure and Axes directly
-#     fig = Figure(figsize=(4, 4))
-#     ax = fig.add_subplot(111)
-
-#     if mel_config.toggle_mel_filter == "sptrgm":
-#         # Plot the Mel spectrogram
-#         img = ax.imshow(mel_spec, aspect='auto', origin='lower', vmin=None, vmax=None)
-#         ax.set_title(f'Mel Spectrogram - {audio_sample.selected_directory}', fontsize=12)
+        # Redraw the canvas
+        canvas.draw()
         
-#         # Set x-ticks for time in seconds
-#         ax.set_xticks(x_ticks)
-#         ax.set_xticklabels(x_tick_labels)
-#         ax.set_xlabel('Time [sec]', fontsize=10)
-        
-#         # Set y-ticks for Mel bins
-#         ax.set_yticks(yticks - 1)  # Adjust to match positions with Mel bins
-#         ax.set_yticklabels(yticks)
-#         ax.set_ylabel('Mel Bins', fontsize=10)
-
-#         # Add colorbar with finer ticks
-#         cbar = fig.colorbar(img, ax=ax, orientation='vertical', format="%0.1f")
-#         cbar.set_ticks(np.arange(0, 1.1, 0.1))  # Ticks at intervals of 0.1 from 0 to 1
-        
-#         # Annotate with total samples
-#         ax.annotate(
-#             f'Total Samples: {total_samples}', 
-#             xy=(0.5, -0.2),  # Move it lower by setting a larger negative y-coordinate
-#             xycoords='axes fraction', 
-#             ha='center', 
-#             fontsize=12
-#         )
-        
-#         # Add orange horizontal dotted lines between Mel bins
-#         for ytick in yticks - 1:
-#             ax.axhline(y=ytick + 0.5, color='orange', linestyle=':', linewidth=1.5)
-
-#     elif mel_config.toggle_mel_filter == "filter":
-#         # Plot the filter banks
-#         plot_filterbanks(
-#             custom_mel_scale.fb,
-#             custom_mel_scale.all_freqs,
-#             custom_mel_scale.f_pts,
-#             custom_mel_scale.spread
-#         )
-
-    # # Embed the Matplotlib figure in the Tkinter frame
-    # canvas = FigureCanvasTkAgg(fig, master=output_frame)
-    # canvas.draw()
-    # canvas.get_tk_widget().pack(fill="both", expand=True)
-
-
-def plot_filterbanks(filter_banks, all_freqs, f_pts, spread):
+def toggle_colorbar_visibility(ax, visible=True):
     """
-    Plot the filter banks.
+    Toggle the visibility of the colorbar on a given Axes.
+
+    Args:
+        ax (matplotlib.axes.Axes): The Axes containing the colorbar.
+        visible (bool): Whether to show or hide the colorbar.
+    """
+    if hasattr(ax, "_colorbar") and ax._colorbar:
+        try:
+            cbar = ax._colorbar
+            # Toggle visibility of colorbar
+            cbar.ax.set_visible(visible)
+            
+            # Optionally, clear the colorbar outline and ticks when hiding
+            if not visible:
+                cbar.outline.set_visible(False)
+                cbar.ax.tick_params(labelleft=False, labelright=False)
+            else:
+                cbar.outline.set_visible(True)
+                cbar.ax.tick_params(labelleft=True, labelright=False)
+        except Exception as e:
+            print(f"Error while toggling colorbar visibility: {e}")
+
+# def safely_remove_colorbar(ax):
+#     """
+#     Safely removes the colorbar from the given Axes.
+
+#     Args:
+#         ax (matplotlib.axes.Axes): The Axes object from which to remove the colorbar.
+#         canvas (FigureCanvasTkAgg): The canvas tied to the figure.
+#     """
+#     if hasattr(ax, "_colorbar") and ax._colorbar:
+#         print(f"Before removal: {ax._colorbar}, Colorbar axes: {ax._colorbar.ax}")
+
+#         try:
+#             if ax._colorbar.ax:  # Ensure the colorbar's Axes is valid
+#                 ax._colorbar.ax.remove()
+#         except AttributeError as e:
+#             print(f"Error while removing colorbar: {e}")
+#         finally:
+#             ax._colorbar = None  # Clear the colorbar reference
+        
+#         print(f"After removal: {ax._colorbar}")  # Confirm removal success
+        
+        
+
+def plot_filterbanks(filter_banks, all_freqs, f_pts, spread, canvas, ax):
+    """
+    Plot the filter banks on a given Matplotlib canvas and axes.
 
     Args:
         filter_banks (torch.Tensor): The filter bank tensor of shape (n_freqs, n_filters).
         all_freqs (torch.Tensor): Frequencies corresponding to the rows in filter_banks.
         f_pts (list or torch.Tensor): Center frequencies of the filters.
         spread (int): Spread of each filter.
+        canvas (FigureCanvasTkAgg): The Matplotlib canvas for rendering the plot.
+        ax (matplotlib.axes.Axes): The axes to plot on.
     """
-    # plt.figure(figsize=(12, 6))
+    # Clear the axes
+    ax.clear()
+
+    # Plot each filter bank
     for i in range(filter_banks.shape[1]):
-        plt.plot(all_freqs.numpy(), filter_banks[:, i].numpy(), label=f"{f_pts[i]:.0f} Hz")
-    plt.xlabel("Frequency (Hz)")
-    plt.ylabel("Amplitude")
-    plt.title(f"Triangular Filter Bank with Spread of ±{spread} Hz")
-    plt.legend()
-    plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize='small')
-    plt.grid(True)
-    # plt.show()
+        ax.plot(
+            all_freqs.numpy(),
+            filter_banks[:, i].numpy(),
+            label=f"{f_pts[i]:.0f} Hz"
+        )
+
+    # Set axis labels, title, and other details
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("Amplitude")
+    ax.set_title(f"Triangular Filter Bank with Spread of ±{spread} Hz")
+    ax.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize='small')
+    ax.grid(True)
+
+    # Trigger canvas redraw
+    # canvas.draw()
+
+
+
+# def plot_filterbanks(filter_banks, all_freqs, f_pts, spread):
+#     """
+#     Plot the filter banks.
+
+#     Args:
+#         filter_banks (torch.Tensor): The filter bank tensor of shape (n_freqs, n_filters).
+#         all_freqs (torch.Tensor): Frequencies corresponding to the rows in filter_banks.
+#         f_pts (list or torch.Tensor): Center frequencies of the filters.
+#         spread (int): Spread of each filter.
+#     """
+#     # plt.figure(figsize=(12, 6))
+#     for i in range(filter_banks.shape[1]):
+#         plt.plot(all_freqs.numpy(), filter_banks[:, i].numpy(), label=f"{f_pts[i]:.0f} Hz")
+#     plt.xlabel("Frequency (Hz)")
+#     plt.ylabel("Amplitude")
+#     plt.title(f"Triangular Filter Bank with Spread of ±{spread} Hz")
+#     plt.legend()
+#     plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize='small')
+#     plt.grid(True)
+#     # plt.show()
 
 def plot_spikes(audio_sample, mel_config, spikes_data, plot_radio, output_frame):
 

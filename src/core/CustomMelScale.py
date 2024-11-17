@@ -159,7 +159,10 @@ def custom_melscale_fbanks(
     f_pts = [275, 375, 490, 615, 735, 857, 980, 1110, 1225, 1405, 1660, 1895, 2145, 3735, 6365, 7625]
     
     # Spread in Hz (the triangle will span midpoint +/- spread)
-    spread = 10 # Spread of 3 Hz on either side of each midpoint
+    # very minimu spread is calculated here:
+    spread = 2*(sample_rate//2)/(n_freqs-1) # Spread of 3 Hz on either side of each midpoint
+    
+    print(f"all_freqs:{all_freqs[0:3]}, few f_pts: {f_pts[0:3]}, spread: {spread} , sample_rate//2: {sample_rate//2}, n_freqs: {n_freqs}")
     
     # Use your custom triangular filterbank
     fb = create_triangular_filterbank_variable_spread(all_freqs, f_pts, spread)
@@ -185,30 +188,61 @@ def create_triangular_filterbank_variable_spread(all_freqs: torch.Tensor, f_pts:
     Create a triangular filter bank with a defined spread for each filter.
     
     Args:
-        all_freqs (torch.Tensor): Frequency points (e.g., from STFT).
-        f_pts (torch.Tensor): Midpoints where each triangle peaks.
-        spread (int): The width of the triangle's base on either side of the midpoint (in Hz).
-    
+        all_freqs (torch.Tensor): Frequencies corresponding to the rows in the filter bank (e.g., from STFT).
+        f_pts (torch.Tensor): Center frequencies of the triangular filters.
+        spread (int): Width of the base of each triangle (in Hz).
+
     Returns:
-        torch.Tensor: The filter bank of size (n_freqs, n_filter).
+        torch.Tensor: A filter bank matrix of size (n_freqs, n_filters), where each column is a filter.
     """
-    # Initialize the filter bank (n_freqs x n_filter)
-    fb = torch.zeros(len(all_freqs), len(f_pts))
+    n_freqs = len(all_freqs)  # Number of frequency bins
+    n_filters = len(f_pts)   # Number of filters
+
+    # Initialize the filter bank as a zero matrix
+    filter_bank = torch.zeros(n_freqs, n_filters)
+
+    # Loop over each filter
+    for filter_idx, center_freq in enumerate(f_pts):
+        # Calculate the triangular shape for this filter
+        for freq_idx, freq in enumerate(all_freqs):
+            if center_freq - spread <= freq <= center_freq:
+                # Rising slope of the triangle
+                filter_bank[freq_idx, filter_idx] = (freq - (center_freq - spread)) / spread
+            elif center_freq < freq <= center_freq + spread:
+                # Falling slope of the triangle
+                filter_bank[freq_idx, filter_idx] = 1 - (freq - center_freq) / spread
+
+    return filter_bank
+
+# def create_triangular_filterbank_variable_spread(all_freqs: torch.Tensor, f_pts: torch.Tensor, spread: int) -> torch.Tensor:
+#     """
+#     Create a triangular filter bank with a defined spread for each filter.
     
-    # Create a triangular filter for each midpoint
-    # for i, midpoint in enumerate(f_pts):
-    for i in range(0, len(f_pts)):
-    # for i in range(1, len(f_pts) - 1):  # Start from the second midpoint and end at the second-to-last
-        midpoint = f_pts[i]  # Define midpoint inside the loop
-        for j, freq in enumerate(all_freqs):
-            if midpoint - spread <= freq <= midpoint:
-                # Upward slope: from (midpoint - spread) to midpoint
-                fb[j, i] = (freq - (midpoint - spread)) / spread
-            elif midpoint < freq <= midpoint + spread:
-                # Downward slope: from midpoint to (midpoint + spread)
-                fb[j, i] = 1 - (freq - midpoint) / spread
+#     Args:
+#         all_freqs (torch.Tensor): Frequency points (e.g., from STFT).
+#         f_pts (torch.Tensor): Midpoints where each triangle peaks.
+#         spread (int): The width of the triangle's base on either side of the midpoint (in Hz).
     
-    return fb
+#     Returns:
+#         torch.Tensor: The filter bank of size (n_freqs, n_filter).
+#     """
+#     # Initialize the filter bank (n_freqs x n_filter)
+#     fb = torch.zeros(len(all_freqs), len(f_pts))
+    
+#     # Create a triangular filter for each midpoint
+#     # for i, midpoint in enumerate(f_pts):
+#     for i in range(0, len(f_pts)):
+#     # for i in range(1, len(f_pts) - 1):  # Start from the second midpoint and end at the second-to-last
+#         midpoint = f_pts[i]  # Define midpoint inside the loop
+#         for j, freq in enumerate(all_freqs):
+#             if midpoint - spread <= freq <= midpoint:
+#                 # Upward slope: from (midpoint - spread) to midpoint
+#                 fb[j, i] = (freq - (midpoint - spread)) / spread
+#             elif midpoint < freq <= midpoint + spread:
+#                 # Downward slope: from midpoint to (midpoint + spread)
+#                 fb[j, i] = 1 - (freq - midpoint) / spread
+    
+#     return fb
 
 # original code here:
 def _create_triangular_filterbank(
