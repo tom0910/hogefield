@@ -81,7 +81,6 @@ figs, axes, canvases = initialize_plots(frames)
     channel_slider,
     filter_choice_widget,
     mel_filter_plot_radio_widget,
-    # mel_plot_radio,
     spk_freq_label,
     hop_length_entry,
     n_mels_entry
@@ -102,18 +101,10 @@ def update_plot_mel():
         mel_config, n_fft_input, hop_length_slider, n_mels_slider, f_min_slider, f_max_slider, 
         power_toggle, 
         filter_choice_widget,
-        # filter_choice_radio,
-        mel_filter_plot_radio_widget 
-        # mel_plot_radio
+        mel_filter_plot_radio_widget
     )
     mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale = mel_spctgrm_calc(audio_sample, mel_config)
     plot_mel_spectrogram(mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale, canvases[1], axes[1])
-   
-    # plot_mel_spectrogram_in_widget(audio_sample, mel_config, out_frame_mel_sptgrm_plt)
-    # update_plot_spike()
-    # channel_slider.config(to=mel_config.n_mels)
-    # polt_reverse(audio_sample, mel_config, spikes_data, out_rev_spike_raster_plt, out_rev_mel_sptgrm_plt, out_rev_play)
-
 
 def update_plot_spike():
     spikes_data.threshold = float(threshold_slider.get())
