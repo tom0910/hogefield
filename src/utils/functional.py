@@ -65,12 +65,19 @@ def find_max_interval(spikes, channel, time_step):
 
     return max_interval[0], max_interval[1], max_count
 
-def normalize(obj):
+def normalize(obj, normalize_to=None):
     """Normalize the spectrogram or cumsum globally to a 0-1 range."""
+    normalize = (obj - obj.min()) / (obj.max() - obj.min())
+    if normalize_to:
+        normalize=normalize*normalize_to         
     return (obj - obj.min()) / (obj.max() - obj.min())
 
 def denormalize(tensor, original_min, original_max):
     return tensor * (original_max - original_min) + original_min
+
+# def normalize_spectrogram_global(mel_spectrogram):
+#     """Normalize the mel spectrogram globally to a 0-1 range."""
+#     return (mel_spectrogram - mel_spectrogram.min()) / (mel_spectrogram.max() - mel_spectrogram.min())
 
 def generate_spikes(audio_sample, mel_config, threshold, norm_inp=True, norm_cumsum=True):
     mel_spectrogram, sample_rate, _ = get_mel_spectrogram(audio_sample, mel_config)

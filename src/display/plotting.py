@@ -6,6 +6,7 @@ import ipywidgets as widgets # ideiglenes
 import utils.functional as FU
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+import src.config.config as config
 
 # Function to update the audio waveform
 def plot_waveform(x_values, waveform, canvas, ax):
@@ -90,16 +91,7 @@ def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom
     elif mel_config.toggle_mel_filter == "filter":
         # print(f"Before removal: {ax._colorbar}")
         toggle_colorbar_visibility(ax, visible=False)
-        # if not hasattr(ax, "_colorbar"):
-        #     ax._colorbar.ax.remove()
-        #     ax._colorbar = None
-            
-        # Safely remove the colorbar
-        # safely_remove_colorbar(ax)
-        # hide_colorbar(ax)            
-        
-        # Clear the current Axes
-        # print(f"After removal: {ax._colorbar}")
+
         ax.clear()
 
         # Plot the filter banks
@@ -137,29 +129,6 @@ def toggle_colorbar_visibility(ax, visible=True):
         except Exception as e:
             print(f"Error while toggling colorbar visibility: {e}")
 
-# def safely_remove_colorbar(ax):
-#     """
-#     Safely removes the colorbar from the given Axes.
-
-#     Args:
-#         ax (matplotlib.axes.Axes): The Axes object from which to remove the colorbar.
-#         canvas (FigureCanvasTkAgg): The canvas tied to the figure.
-#     """
-#     if hasattr(ax, "_colorbar") and ax._colorbar:
-#         print(f"Before removal: {ax._colorbar}, Colorbar axes: {ax._colorbar.ax}")
-
-#         try:
-#             if ax._colorbar.ax:  # Ensure the colorbar's Axes is valid
-#                 ax._colorbar.ax.remove()
-#         except AttributeError as e:
-#             print(f"Error while removing colorbar: {e}")
-#         finally:
-#             ax._colorbar = None  # Clear the colorbar reference
-        
-#         print(f"After removal: {ax._colorbar}")  # Confirm removal success
-        
-        
-
 def plot_filterbanks(filter_banks, all_freqs, f_pts, spread, canvas, ax):
     """
     Plot the filter banks on a given Matplotlib canvas and axes.
@@ -190,86 +159,175 @@ def plot_filterbanks(filter_banks, all_freqs, f_pts, spread, canvas, ax):
     ax.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize='small')
     ax.grid(True)
 
-    # Trigger canvas redraw
-    # canvas.draw()
+# def plot_spikes(audio_sample, mel_config, spikes_data, canvas, ax):
+def plot_spikes(spikes,num_neurons, num_spike_index, canvas, ax):
+    """
+    Plot spikes on the given canvas and axes.
+
+    Args:
+        audio_sample (AudioSample): The audio sample data.
+        mel_config (MelSpectrogramConfig): Mel spectrogram configuration.
+        spikes_data (Spikes): Spikes data, including threshold.
+        canvas (FigureCanvasTkAgg): The canvas to render the plot.
+        ax (matplotlib.axes.Axes): The axes to render the plot.
+    """
+    # Clear previous plots
+    ax.clear()
+
+    # Retrieve threshold and calculate spikes
+    # threshold = spikes_data.threshold
+    # threshold = spike_threshold
+    # num_neurons, num_spike_index, spikes, _, _ = FU.generate_spikes(
+    #     audio_sample, mel_config, threshold, norm_inp=True, norm_cumsum=True
+    # )
+
+    # Get spike coordinates
+    y_coords, x_coords = torch.nonzero(spikes, as_tuple=True)
+    ax.scatter(x_coords, y_coords, s=1, c="black", label="")
+
+    # Find the channel with the highest average spike rate
+    channel, count = find_max_one_channels(spikes)
+
+    # Annotate the plot with the highest average spike information
+    ax.annotate(
+        f"Channel number {channel} has a max avg spikes of {(count / spikes.shape[1]):.3f}",
+        xy=(0.5, -0.2),
+        xycoords="axes fraction",
+        ha="center",
+        fontsize=9,
+    )
+
+    # Set custom y-ticks and labels
+    yticks = np.arange(0, num_neurons)
+    ytick_labels = [f"Neuron {i + 1}" for i in yticks]
+    ax.set_yticks(yticks)
+    ax.set_yticklabels(ytick_labels)
+    ax.set_ylim(-0.5, num_neurons - 0.5)
+
+    # Set plot limits and labels
+    x_max_index = num_spike_index
+    ax.set_xlim(0, x_max_index)
+    ax.set_xlabel("Spike Event Index", fontsize=10)
+    ax.set_ylabel("Channels", fontsize=10)
+    ax.set_title("Positive Spikes Visualization", fontsize=12)
+
+    # Redraw the canvas
+    canvas.draw()
 
 
+# def plot_distribution(audio_sample, mel_config, canvas, ax):
+def plot_distribution(mel_spectrogram, canvas, ax):    
+    """
+    Plots the histogram distribution of the Mel spectrogram values.
 
-# def plot_filterbanks(filter_banks, all_freqs, f_pts, spread):
+    Args:
+        ax (matplotlib.axes.Axes): The Axes to draw the histogram.
+        mel_spectrogram (torch.Tensor): The Mel spectrogram data.
+        canvas (FigureCanvasTkAgg): The canvas where the plot will be displayed.
+    """
+    ax.clear()  # Clear Axes for reuse
+   
+    # mel_spectrogram, _, _ = FU.get_mel_spectrogram(audio_sample, mel_config)
+    # print(f"Mel spectrogram shape: {mel_spectrogram.shape}")
+    # print(f"Mel spectrogram max value: {mel_spectrogram.max()}")
+    # print(f"Mel spectrogram min value: {mel_spectrogram.min()}")
+
+    ax.hist(mel_spectrogram.flatten().numpy(), bins=500, color="blue", alpha=0.7)
+    ax.set_title("Data Distribution After Normalization", fontsize=12)
+    ax.set_xlabel("Value", fontsize=10)
+    ax.set_ylabel("Data Count", fontsize=10)
+    ax.grid(True)
+    
+    
+    # Automatically adjust the y-axis
+    # ax.relim()  # Recompute data limits
+    # ax.autoscale()  # Automatically scale y-axis
+    # Explicit y-lim a jobb vizuális érthetőségért
+        # Ha automatikus skálázás nem működik jól
+    max_y = ax.get_ylim()[1]  # Az aktuális automatikus felső határ
+    ax.set_ylim(0, max_y*0.2)  # Fix skála beállítása
+
+    # Redraw the canvas
+    canvas.draw()
+
+
+# def plot_spikes_or_distribution(
+#     canvas, ax, audio_sample, mel_config, plot_choice, spikes_data=None 
+# ):
 #     """
-#     Plot the filter banks.
+#     Calls the appropriate plotting function based on the `plot_choice` value.
 
 #     Args:
-#         filter_banks (torch.Tensor): The filter bank tensor of shape (n_freqs, n_filters).
-#         all_freqs (torch.Tensor): Frequencies corresponding to the rows in filter_banks.
-#         f_pts (list or torch.Tensor): Center frequencies of the filters.
-#         spread (int): Spread of each filter.
+#         ax (matplotlib.axes.Axes): The Axes to draw the plot.
+#         canvas (FigureCanvasTkAgg): The canvas where the plot will be displayed.
+#         plot_choice (str): Determines the plot type ('spikes' or 'distribution').
+#         spikes_data (dict, optional): Contains data for spike visualization.
+#         mel_spectrogram (torch.Tensor, optional): Data for histogram plotting.
 #     """
-#     # plt.figure(figsize=(12, 6))
-#     for i in range(filter_banks.shape[1]):
-#         plt.plot(all_freqs.numpy(), filter_banks[:, i].numpy(), label=f"{f_pts[i]:.0f} Hz")
-#     plt.xlabel("Frequency (Hz)")
-#     plt.ylabel("Amplitude")
-#     plt.title(f"Triangular Filter Bank with Spread of ±{spread} Hz")
-#     plt.legend()
-#     plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize='small')
-#     plt.grid(True)
-#     # plt.show()
-
-def plot_spikes(audio_sample, mel_config, spikes_data, plot_radio, output_frame):
-
-    # Clear the output_frame
-    for widget in output_frame.winfo_children():
-        widget.destroy()
-
-    # Create a Matplotlib figure and axis        
-    fig, ax = plt.subplots(figsize=(6, 4))
-    if plot_radio == "distribution":
+#     if plot_choice == config.DEFAULT_SPIKE_PLT_PICK:
         
-        mel_spectrogram, _, _ = FU.get_mel_spectrogram(audio_sample, mel_config)
-        plt.hist(mel_spectrogram.flatten().numpy(), bins=100)
-        plt.title(f'Data Distribution After Normalization {plot_radio}')
-        plt.xlabel("Value")
-        plt.ylabel("Data Count")
+#         plot_spikes(audio_sample, mel_config, spikes_data, canvas, ax)
+#     elif plot_choice == config.DEFAULT_DIST_PLT_PICK:
+#         plot_distribution(audio_sample, mel_config, canvas, ax)
+#     else:
+#         raise ValueError("Invalid plot_choice value. Use 'spikes' or 'distribution'.")
+    
+# def plot_spikes(audio_sample, mel_config, spikes_data, plot_radio, output_frame):
 
-    elif plot_radio=="spikes":
-        threshold = spikes_data.threshold
-        num_neurons, num_spike_index, spikes,_,_ = FU.generate_spikes(audio_sample, mel_config, threshold, norm_inp=True, norm_cumsum=True)
-        y_coords, x_coords = torch.nonzero(spikes, as_tuple=True)
+#     # Clear the output_frame
+#     for widget in output_frame.winfo_children():
+#         widget.destroy()
 
-        ax.scatter(x_coords, y_coords, s=1, c="black", label="")
-
-        #calculate avarage rate of spiking in the highest count channel
-        channel, count = find_max_one_channels(spikes)
-
-        ax.annotate(
-            f'channel number {channel} has a max avrg spikes of  {(count/spikes.shape[1]):.3f}', 
-            xy=(0.5, -0.2),  # Move it lower by setting a larger negative y-coordinate
-            xycoords='axes fraction', 
-            ha='center', 
-            fontsize=9
-        )
+#     # Create a Matplotlib figure and axis        
+#     fig, ax = plt.subplots(figsize=(6, 4))
+#     if plot_radio == "distribution":
         
-        # Set up custom y-ticks and labels
-        yticks = np.arange(0, num_neurons)
-        ytick_labels = [f'neuron {i+1}' for i in yticks]  # Custom labels for each channel
-        
-        ax.set_yticks(yticks)
-        ax.set_yticklabels(ytick_labels)
-        ax.set_ylim(-0.5, num_neurons - 0.5)  # Ensures all y-ticks are visible
-        
-        # Set limits and labels
-        x_max_index = num_spike_index
-        ax.set_xlim(0, x_max_index)
-        ax.set_xlabel('Spike Event Index', fontsize=10)
-        ax.set_ylabel('Channels', fontsize=10)
-        ax.set_title("Positive Spikes Visualization", fontsize=12)
-        # plt.show()
+#         mel_spectrogram, _, _ = FU.get_mel_spectrogram(audio_sample, mel_config)
+#         plt.hist(mel_spectrogram.flatten().numpy(), bins=100)
+#         plt.title(f'Data Distribution After Normalization {plot_radio}')
+#         plt.xlabel("Value")
+#         plt.ylabel("Data Count")
 
-    # Embed the Matplotlib figure in the Tkinter frame
-    canvas = FigureCanvasTkAgg(fig, master=output_frame)
-    canvas.draw()
-    canvas.get_tk_widget().pack(fill="both", expand=True)        
+#     elif plot_radio=="spikes":
+#         threshold = spikes_data.threshold
+#         num_neurons, num_spike_index, spikes,_,_ = FU.generate_spikes(audio_sample, mel_config, threshold, norm_inp=True, norm_cumsum=True)
+#         y_coords, x_coords = torch.nonzero(spikes, as_tuple=True)
+
+#         ax.scatter(x_coords, y_coords, s=1, c="black", label="")
+
+#         #calculate avarage rate of spiking in the highest count channel
+#         channel, count = find_max_one_channels(spikes)
+
+#         ax.annotate(
+#             f'channel number {channel} has a max avrg spikes of  {(count/spikes.shape[1]):.3f}', 
+#             xy=(0.5, -0.2),  # Move it lower by setting a larger negative y-coordinate
+#             xycoords='axes fraction', 
+#             ha='center', 
+#             fontsize=9
+#         )
+        
+#         # Set up custom y-ticks and labels
+#         yticks = np.arange(0, num_neurons)
+#         ytick_labels = [f'neuron {i+1}' for i in yticks]  # Custom labels for each channel
+        
+#         ax.set_yticks(yticks)
+#         ax.set_yticklabels(ytick_labels)
+#         ax.set_ylim(-0.5, num_neurons - 0.5)  # Ensures all y-ticks are visible
+        
+#         # Set limits and labels
+#         x_max_index = num_spike_index
+#         ax.set_xlim(0, x_max_index)
+#         ax.set_xlabel('Spike Event Index', fontsize=10)
+#         ax.set_ylabel('Channels', fontsize=10)
+#         ax.set_title("Positive Spikes Visualization", fontsize=12)
+#         # plt.show()
+
+#     # Embed the Matplotlib figure in the Tkinter frame
+#     canvas = FigureCanvasTkAgg(fig, master=output_frame)
+#     canvas.draw()
+#     canvas.get_tk_widget().pack(fill="both", expand=True)        
+
+
 
 # def plot_mel_spectrogram_inv(
 #     mel_spectrogram,
@@ -277,11 +335,11 @@ def plot_spikes(audio_sample, mel_config, spikes_data, plot_radio, output_frame)
 #     mel_config,
 #     sample_rate,
 #     custom_mel_scale,
-#     output_widget,
+#     output_frame,
 #     title="Mel Spectrogram Approximation"
 # ):
 #     """
-#     Plot a mel spectrogram approximation in a specified widget.
+#     Plot a mel spectrogram approximation in a Tkinter frame.
 
 #     Args:
 #         mel_spectrogram (torch.Tensor or np.ndarray): The mel spectrogram data to plot.
@@ -289,56 +347,63 @@ def plot_spikes(audio_sample, mel_config, spikes_data, plot_radio, output_frame)
 #         mel_config: Configuration object with settings like number of mel bins.
 #         sample_rate (int): Sample rate of the audio.
 #         custom_mel_scale: Custom mel scale for additional filter information if needed.
-#         output_widget: The widget to display the plot.
+#         output_frame: The Tkinter frame to embed the plot.
 #         title (str): Title for the plot (default is "Mel Spectrogram Approximation").
 #     """
-#     with output_widget:
-#         output_widget.clear_output(wait=True)
-        
-#         # Convert to numpy if it's a torch.Tensor
-#         if isinstance(mel_spectrogram, torch.Tensor):
-#             mel_spectrogram = mel_spectrogram.squeeze().numpy()
-        
-#         fig, ax = plt.subplots(figsize=(6, 4))
-#         img = ax.imshow(mel_spectrogram, aspect='auto', origin='lower', vmin=None, vmax=None)
-        
-#         # Configure plot title with directory information
-#         ax.set_title(f'{title} - {audio_sample.selected_directory}', fontsize=12)
-        
-#         # Configure x-ticks for time in seconds
-#         time_axis = mel_spectrogram.shape[-1]
-#         hop_length = mel_config.hop_length
-#         x_ticks = np.linspace(0, time_axis - 1, 4).astype(int)
-#         x_tick_labels = [f'{(tick * hop_length) / sample_rate:.2f}' for tick in x_ticks]
-        
-#         ax.set_xticks(x_ticks)
-#         ax.set_xticklabels(x_tick_labels)
-#         ax.set_xlabel('Time [sec]', fontsize=10)
-        
-#         # Configure y-ticks for Mel bins
-#         num_mel_bins = mel_spectrogram.shape[0]
-#         yticks = np.arange(1, num_mel_bins + 1)
-#         ax.set_yticks(yticks - 1)  # Adjust to match positions with Mel bins
-#         ax.set_yticklabels(yticks)
-#         ax.set_ylabel('Mel Bins', fontsize=10)
-        
-#         # Add colorbar with finer ticks
-#         cbar = plt.colorbar(img, ax=ax, orientation='vertical', format="%0.1f")
-#         cbar.set_ticks(np.linspace(mel_spectrogram.min(), mel_spectrogram.max(), 10))
-        
-#         plt.show()
+#     # Clear previous content in the frame
+#     for widget in output_frame.winfo_children():
+#         widget.destroy()
+
+#     # Convert to numpy if it's a torch.Tensor
+#     if isinstance(mel_spectrogram, torch.Tensor):
+#         mel_spectrogram = mel_spectrogram.squeeze().numpy()
+
+#     # Create the Matplotlib figure and axis
+#     fig, ax = plt.subplots(figsize=(6, 4))
+#     img = ax.imshow(mel_spectrogram, aspect='auto', origin='lower', vmin=None, vmax=None)
+
+#     # Configure plot title with directory information
+#     ax.set_title(f'{title} - {audio_sample.selected_directory}', fontsize=12)
+
+#     # Configure x-ticks for time in seconds
+#     time_axis = mel_spectrogram.shape[-1]
+#     hop_length = mel_config.hop_length
+#     x_ticks = np.linspace(0, time_axis - 1, 4).astype(int)
+#     x_tick_labels = [f'{(tick * hop_length) / sample_rate:.2f}' for tick in x_ticks]
+
+#     ax.set_xticks(x_ticks)
+#     ax.set_xticklabels(x_tick_labels)
+#     ax.set_xlabel('Time [sec]', fontsize=10)
+
+#     # Configure y-ticks for Mel bins
+#     num_mel_bins = mel_spectrogram.shape[0]
+#     yticks = np.arange(1, num_mel_bins + 1)
+#     ax.set_yticks(yticks - 1)  # Adjust to match positions with Mel bins
+#     ax.set_yticklabels(yticks)
+#     ax.set_ylabel('Mel Bins', fontsize=10)
+
+#     # Add colorbar with finer ticks
+#     cbar = plt.colorbar(img, ax=ax, orientation='vertical', format="%0.1f")
+#     cbar.set_ticks(np.linspace(mel_spectrogram.min(), mel_spectrogram.max(), 10))
+
+#     # Embed the Matplotlib figure into the Tkinter frame
+#     canvas = FigureCanvasTkAgg(fig, master=output_frame)
+#     canvas.draw()
+#     canvas.get_tk_widget().pack(fill="both", expand=True)
 
 def plot_mel_spectrogram_inv(
     mel_spectrogram,
     audio_sample,
-    mel_config,
+    # mel_config,
+    hop_length,
     sample_rate,
     custom_mel_scale,
-    output_frame,
-    title="Mel Spectrogram Approximation"
+    title,
+    canvas,
+    ax,
 ):
     """
-    Plot a mel spectrogram approximation in a Tkinter frame.
+    Plot a mel spectrogram approximation on a given Matplotlib Axes embedded in a Tkinter canvas.
 
     Args:
         mel_spectrogram (torch.Tensor or np.ndarray): The mel spectrogram data to plot.
@@ -346,19 +411,18 @@ def plot_mel_spectrogram_inv(
         mel_config: Configuration object with settings like number of mel bins.
         sample_rate (int): Sample rate of the audio.
         custom_mel_scale: Custom mel scale for additional filter information if needed.
-        output_frame: The Tkinter frame to embed the plot.
+        canvas (FigureCanvasTkAgg): The canvas where the plot will be displayed.
+        ax (matplotlib.axes.Axes): The axes to render the plot.
         title (str): Title for the plot (default is "Mel Spectrogram Approximation").
     """
-    # Clear previous content in the frame
-    for widget in output_frame.winfo_children():
-        widget.destroy()
+    # Clear the axes for reuse
+    ax.clear()
 
     # Convert to numpy if it's a torch.Tensor
     if isinstance(mel_spectrogram, torch.Tensor):
         mel_spectrogram = mel_spectrogram.squeeze().numpy()
 
-    # Create the Matplotlib figure and axis
-    fig, ax = plt.subplots(figsize=(6, 4))
+    # Plot the Mel spectrogram approximation
     img = ax.imshow(mel_spectrogram, aspect='auto', origin='lower', vmin=None, vmax=None)
 
     # Configure plot title with directory information
@@ -366,7 +430,6 @@ def plot_mel_spectrogram_inv(
 
     # Configure x-ticks for time in seconds
     time_axis = mel_spectrogram.shape[-1]
-    hop_length = mel_config.hop_length
     x_ticks = np.linspace(0, time_axis - 1, 4).astype(int)
     x_tick_labels = [f'{(tick * hop_length) / sample_rate:.2f}' for tick in x_ticks]
 
@@ -381,14 +444,81 @@ def plot_mel_spectrogram_inv(
     ax.set_yticklabels(yticks)
     ax.set_ylabel('Mel Bins', fontsize=10)
 
-    # Add colorbar with finer ticks
-    cbar = plt.colorbar(img, ax=ax, orientation='vertical', format="%0.1f")
-    cbar.set_ticks(np.linspace(mel_spectrogram.min(), mel_spectrogram.max(), 10))
+    # Add or update the colorbar
+    if not hasattr(ax, "_colorbar") or ax._colorbar is None:
+        cbar = ax.figure.colorbar(img, ax=ax, orientation='vertical', format="%0.1f")
+        cbar.set_ticks(np.linspace(mel_spectrogram.min(), mel_spectrogram.max(), 10))
+        ax._colorbar = cbar
+    else:
+        ax._colorbar.update_normal(img)
 
-    # Embed the Matplotlib figure into the Tkinter frame
-    canvas = FigureCanvasTkAgg(fig, master=output_frame)
+    # Redraw the canvas
     canvas.draw()
-    canvas.get_tk_widget().pack(fill="both", expand=True)
+
+
+# def plot_mel_spectrogram_inv(
+#     mel_spectrogram,
+#     audio_sample,
+#     mel_config,
+#     sample_rate,
+#     custom_mel_scale,
+#     title,
+#     canvas,
+#     ax,
+# ):
+#     """
+#     Plot a mel spectrogram approximation on a given Matplotlib Axes embedded in a Tkinter canvas.
+
+#     Args:
+#         mel_spectrogram (torch.Tensor or np.ndarray): The mel spectrogram data to plot.
+#         audio_sample: Audio sample information, used to display directory in title.
+#         mel_config: Configuration object with settings like number of mel bins.
+#         sample_rate (int): Sample rate of the audio.
+#         custom_mel_scale: Custom mel scale for additional filter information if needed.
+#         canvas (FigureCanvasTkAgg): The canvas where the plot will be displayed.
+#         ax (matplotlib.axes.Axes): The axes to render the plot.
+#         title (str): Title for the plot (default is "Mel Spectrogram Approximation").
+#     """
+#     # Clear the axes for reuse
+#     ax.clear()
+
+#     # Convert to numpy if it's a torch.Tensor
+#     if isinstance(mel_spectrogram, torch.Tensor):
+#         mel_spectrogram = mel_spectrogram.squeeze().numpy()
+
+#     # Plot the Mel spectrogram approximation
+#     img = ax.imshow(mel_spectrogram, aspect='auto', origin='lower', vmin=None, vmax=None)
+
+#     # Configure plot title with directory information
+#     ax.set_title(f'{title} - {audio_sample.selected_directory}', fontsize=12)
+
+#     # Configure x-ticks for time in seconds
+#     time_axis = mel_spectrogram.shape[-1]
+#     hop_length = mel_config.hop_length
+#     x_ticks = np.linspace(0, time_axis - 1, 4).astype(int)
+#     x_tick_labels = [f'{(tick * hop_length) / sample_rate:.2f}' for tick in x_ticks]
+
+#     ax.set_xticks(x_ticks)
+#     ax.set_xticklabels(x_tick_labels)
+#     ax.set_xlabel('Time [sec]', fontsize=10)
+
+#     # Configure y-ticks for Mel bins
+#     num_mel_bins = mel_spectrogram.shape[0]
+#     yticks = np.arange(1, num_mel_bins + 1)
+#     ax.set_yticks(yticks - 1)  # Adjust to match positions with Mel bins
+#     ax.set_yticklabels(yticks)
+#     ax.set_ylabel('Mel Bins', fontsize=10)
+
+#     # Add or update the colorbar
+#     if not hasattr(ax, "_colorbar") or ax._colorbar is None:
+#         cbar = ax.figure.colorbar(img, ax=ax, orientation='vertical', format="%0.1f")
+#         cbar.set_ticks(np.linspace(mel_spectrogram.min(), mel_spectrogram.max(), 10))
+#         ax._colorbar = cbar
+#     else:
+#         ax._colorbar.update_normal(img)
+
+#     # Redraw the canvas
+#     canvas.draw()
 
 
 

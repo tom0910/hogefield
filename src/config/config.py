@@ -12,7 +12,9 @@ DEFAULT_N_FFT = 512
 DEFAULT_POWER = 1.0 #this produces magnitude, .abs() would be redundant code for spectrogram
 
 # Spectrogram and Spiking Settings
-DEFAULT_THRESHOLD = 0.03 # in range [0..1] when melspectrogram is normalized
+DEFAULT_THRESHOLD_MAX=0.03
+DEFAULT_THRESHOLD_STEP =0.00001
+DEFAULT_THRESHOLD = 0.00420 # in range [0..1] when melspectrogram is normalized
 
 DEFAULT_FILTER_CHOICE="standard"
 FILTER_VALUE1 = "standard"
@@ -21,3 +23,6 @@ FILTER_VALUE2 = "custom"
 DEFAULT_FILTER_SPCTRGRM_PLT_CHOICE="sptrgm"
 DEFAULT_SPCTRGRM_PLT="sptrgm"
 DEFAULT_FILTER_PLT="filter"
+
+DEFAULT_SPIKE_PLT_PICK="spikes"
+DEFAULT_DIST_PLT_PICK = "distribution"

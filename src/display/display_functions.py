@@ -43,13 +43,13 @@ def normalize_spectrogram_global(mel_spectrogram):
     """Normalize the mel spectrogram globally to a 0-1 range."""
     return (mel_spectrogram - mel_spectrogram.min()) / (mel_spectrogram.max() - mel_spectrogram.min())
 
-def plot_mel_spectrogram_in_widget(audio_sample, mel_config, output_widget):
-    """Plot the mel spectrogram and filter banks in the specified widget."""
-    mel_spectrogram, sample_rate, custom_mel_scale  = FU.get_mel_spectrogram(audio_sample, mel_config)
-    mel_spectrogram = normalize_spectrogram_global(mel_spectrogram)
+# def plot_mel_spectrogram_in_widget(audio_sample, mel_config, output_widget):
+#     """Plot the mel spectrogram and filter banks in the specified widget."""
+#     mel_spectrogram, sample_rate, custom_mel_scale  = FU.get_mel_spectrogram(audio_sample, mel_config)
+#     mel_spectrogram = normalize_spectrogram_global(mel_spectrogram)
 
-    # Plot mel spectrogram
-    plot_mel_spectrogram(mel_spectrogram, audio_sample, mel_config, sample_rate, custom_mel_scale, output_widget)
+#     # Plot mel spectrogram
+#     plot_mel_spectrogram(mel_spectrogram, audio_sample, mel_config, sample_rate, custom_mel_scale, output_widget)
 
 
 def plot_spikes_in_widget(audio_sample, mel_config, spikes_data, plot_radio, output_widget):    
