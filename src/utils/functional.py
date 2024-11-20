@@ -190,3 +190,20 @@ def inverse_mel_to_waveform(mel_spectrogram, mel_config, sample_rate):
     waveform = griffin_lim_transform(linear_spectrogram)
 
     return waveform.squeeze()  # Remove batch dimension if present
+
+def on_click_save_params(params, ID):
+    """
+    Save parameters to a file.
+
+    Parameters:
+    - params (dict): The parameters to save.
+    - file_path (str): The file path where parameters will be saved.
+    """
+    file_path=f"{ID}-params.txt"
+    try:
+        with open(file_path, "w") as file:
+            for key, value in params.items():
+                file.write(f"{key}: {value}\n")
+        print(f"Parameters saved to {file_path}")
+    except Exception as e:
+        print(f"Error saving parameters: {e}")

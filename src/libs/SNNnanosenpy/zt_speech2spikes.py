@@ -4,16 +4,29 @@ import os
 import torch
 import torchaudio
 
-
 class SubsetSC(SPEECHCOMMANDS):
-    def __init__(self, subset: str = None):
-        super().__init__("./", download=True)
+    def __init__(self, directory: str = "project/data/GSC", subset: str = None, download: bool = False):
+        """
+        A subset of the SPEECHCOMMANDS dataset.
+
+        Parameters:
+        - directory (str): Path to the dataset directory.
+        - subset (str): Specify 'training', 'validation', or 'testing' subset.
+        - download (bool): If True, downloads the dataset if not available.
+        """
+        # Ensure the directory exists or handle download manually
+        if download and not os.path.exists(directory):
+            raise ValueError(f"Download is not supported automatically in this class. Please ensure data exists in {directory}.")
+
+        # Pass directory as the first positional argument to the parent class
+        super().__init__(directory)
 
         def load_list(filename):
             filepath = os.path.join(self._path, filename)
             with open(filepath) as fileobj:
                 return [os.path.normpath(os.path.join(self._path, line.strip())) for line in fileobj]
 
+        # Adjust the walker based on the subset
         if subset == "validation":
             self._walker = load_list("validation_list.txt")
         elif subset == "testing":
@@ -22,6 +35,26 @@ class SubsetSC(SPEECHCOMMANDS):
             excludes = load_list("validation_list.txt") + load_list("testing_list.txt")
             excludes = set(excludes)
             self._walker = [w for w in self._walker if w not in excludes]
+
+
+# class SubsetSC(SPEECHCOMMANDS):
+#     # def __init__(self, subset: str = None):
+#         super().__init__(directory, download=download)
+#         # super().__init__("project/data/GSC", download=FALSE)
+
+#         def load_list(filename):
+#             filepath = os.path.join(self._path, filename)
+#             with open(filepath) as fileobj:
+#                 return [os.path.normpath(os.path.join(self._path, line.strip())) for line in fileobj]
+
+#         if subset == "validation":
+#             self._walker = load_list("validation_list.txt")
+#         elif subset == "testing":
+#             self._walker = load_list("testing_list.txt")
+#         elif subset == "training":
+#             excludes = load_list("validation_list.txt") + load_list("testing_list.txt")
+#             excludes = set(excludes)
+#             self._walker = [w for w in self._walker if w not in excludes]
 
 # Create training and testing split of the data. We do not use validation in this tutorial.
 # train_set = SubsetSC("training")

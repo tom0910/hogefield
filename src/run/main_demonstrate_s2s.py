@@ -24,6 +24,7 @@ from utils.widget_sync_utils import set_audio_sample_from_widget_values, set_mel
 from core.Spikes import Spikes
 from display.plotting import plot_waveform, plot_mel_spectrogram, plot_spikes, plot_distribution, plot_mel_spectrogram_inv
 import utils.functional as FU
+import utils.training_functional as TF
 
 # Initialize AudioSample and MelSpectrogramConfig
 audio_sample = AudioSample(BASE_PATH, DEFAULT_DIRECTORY, DEFAULT_FILE_INDEX)
@@ -83,7 +84,9 @@ figs, axes, canvases = initialize_plots(frames)
     filter_choice_widget,
     mel_filter_plot_radio_widget, 
     spk_freq_label,
-    hop_length_entry, n_mels_entry    
+    hop_length_entry, n_mels_entry,
+    save_button_widget,
+    filename_entry      
 ) = create_widgets(audio_sample, mel_config, spikes_data, widget_frame)
 
 # Observers for widget changes
@@ -211,6 +214,20 @@ mel_filter_plot_radio_widget.bind(update_plot_mel)
 threshold_slider.config(command=lambda v: update_plot_spike())
 threshold_entry.bind('<Return>', lambda event: update_plot_spike())
 spike_plot_radio_widget.bind(update_plot_spike)
+
+#save button observer - save these params. for thraining
+params = {
+    "batch_size": 128,
+    "sf_threshold": spikes_data.threshold,
+    "hop_length": mel_config.hop_length,
+    "f_min": mel_config.f_max,
+    "f_max": mel_config.f_min,
+    "n_mels": mel_config.n_mels,
+    "n_fft": mel_config.n_fft,
+    "wav_file_samples": audio_sample.sample_rate,
+    "timestep": TF.calculate_num_frames(L=audio_sample.sample_rate, n_fft=mel_config.n_fft, hop_length=mel_config.hop_length, center=True, show=True)
+}
+save_button_widget.bind("<Button-1>", lambda event: FU.on_click_save_params(params=params, ID=filename_entry.get()))
 
 # Initial display setup
 update_plot()

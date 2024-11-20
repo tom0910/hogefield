@@ -189,6 +189,14 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     hop_length_slider.config(command=lambda _: update_label())
     threshold_slider.config(command=lambda _: update_label())
         
+    save_button_widget = tk.Button(widget_frame, text="Save Parms.")
+    # Add an Entry widget for the filename
+    filename_label = tk.Label(widget_frame, text="ID:")
+    filename_entry = tk.Entry(widget_frame, width=50)
+
+    # Bind the save button to the function, passing the Entry widget as an argument
+    #save_button.bind("<Button-1>", lambda event: on_save_button_click(filename_entry))    
+        
     # Arrange widgets in a grid layout for better UI
     widgets = [
         (directory_dropdown_label, directory_dropdown,None),
@@ -205,7 +213,8 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
         (channel_slider_label, channel_slider, None),
         (spk_freq_label, None,None),
         (filter_choice_widget,None,None),
-        (mel_filter_plot_radio_widget,None,None)
+        (mel_filter_plot_radio_widget,None,None),
+        (save_button_widget,filename_label,filename_entry)
     ]
 
     row = 0
@@ -234,7 +243,9 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
         filter_choice_widget,
         mel_filter_plot_radio_widget, 
         spk_freq_label,
-        hop_length_entry, n_mels_entry
+        hop_length_entry, n_mels_entry,
+        save_button_widget,
+        filename_entry
     )
     
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
