@@ -191,6 +191,7 @@ def inverse_mel_to_waveform(mel_spectrogram, mel_config, sample_rate):
 
     return waveform.squeeze()  # Remove batch dimension if present
 
+from datetime import datetime
 def on_click_save_params(params, ID):
     """
     Save parameters to a file.
@@ -199,7 +200,8 @@ def on_click_save_params(params, ID):
     - params (dict): The parameters to save.
     - file_path (str): The file path where parameters will be saved.
     """
-    file_path=f"{ID}-params.txt"
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    file_path=f"id_{ID}_{timestamp}_params.txt"
     try:
         with open(file_path, "w") as file:
             for key, value in params.items():

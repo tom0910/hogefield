@@ -1,0 +1,9 @@
+batch_size: 128
+sf_threshold: 0.0042
+hop_length: 226
+f_min: 300
+f_max: 8000
+n_mels: 16
+n_fft: 512
+wav_file_samples: 16000
+timestep: 71

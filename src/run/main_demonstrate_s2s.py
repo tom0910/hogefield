@@ -216,6 +216,35 @@ threshold_entry.bind('<Return>', lambda event: update_plot_spike())
 spike_plot_radio_widget.bind(update_plot_spike)
 
 #save button observer - save these params. for thraining
+def get_params(spikes_data, mel_config, audio_sample):
+    """
+    Generate the parameters dictionary dynamically based on the current state.
+
+    Parameters:
+    - spikes_data: Object containing spike threshold.
+    - mel_config: Object containing mel-spectrogram configuration.
+    - audio_sample: Object containing audio sample information.
+
+    Returns:
+    - dict: The dynamically generated parameters.
+    """
+    return {
+        "batch_size": 128,
+        "sf_threshold": spikes_data.threshold,
+        "hop_length": mel_config.hop_length,
+        "f_min": mel_config.f_min,
+        "f_max": mel_config.f_max,
+        "n_mels": mel_config.n_mels,
+        "n_fft": mel_config.n_fft,
+        "wav_file_samples": audio_sample.sample_rate,
+        "timestep": TF.calculate_num_frames(
+            L=audio_sample.sample_rate,
+            n_fft=mel_config.n_fft,
+            hop_length=mel_config.hop_length,
+            center=True,
+            show=True
+        )
+    }
 params = {
     "batch_size": 128,
     "sf_threshold": spikes_data.threshold,
@@ -227,7 +256,7 @@ params = {
     "wav_file_samples": audio_sample.sample_rate,
     "timestep": TF.calculate_num_frames(L=audio_sample.sample_rate, n_fft=mel_config.n_fft, hop_length=mel_config.hop_length, center=True, show=True)
 }
-save_button_widget.bind("<Button-1>", lambda event: FU.on_click_save_params(params=params, ID=filename_entry.get()))
+save_button_widget.bind("<Button-1>", lambda event: FU.on_click_save_params(params=get_params(spikes_data=spikes_data,mel_config=mel_config,audio_sample=audio_sample), ID=filename_entry.get()))
 
 # Initial display setup
 update_plot()
