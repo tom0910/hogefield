@@ -75,37 +75,37 @@ import tkinter as tk
 from tkinter import ttk
 
 
-class EntryWidget:
-    def __init__(self, parent, variable, label_text="Enter:", default_value=10):
-        self.var = variable
-        # Dynamically set the default value
-        if isinstance(self.var, tk.StringVar):
-            self.var.set(str(default_value))
-        elif isinstance(self.var, (tk.IntVar, tk.DoubleVar)):
-            self.var.set(default_value)
-        else:
-            raise TypeError("Unsupported variable type: Use StringVar, IntVar, or DoubleVar.")
+# class EntryWidget:
+#     def __init__(self, parent, variable, label_text="Enter:", default_value=10):
+#         self.var = variable
+#         # Dynamically set the default value
+#         if isinstance(self.var, tk.StringVar):
+#             self.var.set(str(default_value))
+#         elif isinstance(self.var, (tk.IntVar, tk.DoubleVar)):
+#             self.var.set(default_value)
+#         else:
+#             raise TypeError("Unsupported variable type: Use StringVar, IntVar, or DoubleVar.")
         
-        print(f"Default value set: {self.var.get()}")
-        self.label = ttk.Label(parent, text=label_text)
-        self.entry = ttk.Entry(parent, textvariable=self.var, width=10)
-        self.entry.insert(0, "write me babe")
+#         print(f"Default value set: {self.var.get()}")
+#         self.label = ttk.Label(parent, text=label_text)
+#         self.entry = ttk.Entry(parent, textvariable=self.var, width=10)
+#         self.entry.insert(0, "write me babe")
 
-    def grid(self, row, column, **kwargs):
-        self.label.grid(row=row, column=column, **kwargs)
-        self.entry.grid(row=row+1, column=column, **kwargs)
+#     def grid(self, row, column, **kwargs):
+#         self.label.grid(row=row, column=column, **kwargs)
+#         self.entry.grid(row=row+1, column=column, **kwargs)
 
-    def get(self):
-        return self.var.get()
+#     def get(self):
+#         return self.var.get()
 
-    def set(self, value):
-        self.var.set(value)
+#     def set(self, value):
+#         self.var.set(value)
 
-    def bind(self, callback):
-        if callback is not None:
-            self.var.trace_add("write", lambda *args: callback(self.get()))
-        else:
-            raise ValueError("Callback function cannot be None")
+#     def bind(self, callback):
+#         if callback is not None:
+#             self.var.trace_add("write", lambda *args: callback(self.get()))
+#         else:
+#             raise ValueError("Callback function cannot be None")
 
   
 
@@ -236,35 +236,7 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
 
     # Bind the save button to the function, passing the Entry widget as an argument
     #save_button.bind("<Button-1>", lambda event: on_save_button_click(filename_entry))    
-    
-    def create_widgets(widget_frame):
-        # Simplified hyperparameter widget setup for debugging
-        num_hidden_var = tk.IntVar()  # Initialize variable
-        
-        # Create EntryWidget
-        field1 = EntryWidget(
-            widget_frame,
-            variable=num_hidden_var,
-            label_text="NUM_HIDDEN",
-            default_value=256
-        )
-                
-        # Optional: Update variable value after creation
-        num_hidden_var.set(20200)  # Set to a new value
-        print(f"After set(): Variable value = {num_hidden_var.get()}")
-        
-        return field1
-    
-    field1 = create_widgets(widget_frame=widget_frame)
-    field2 = create_widgets(widget_frame=widget_frame)
-    field3 = create_widgets(widget_frame=widget_frame)
-
-
-
-
-
-    # widget_frame.update_idletasks()
-        
+            
     # Arrange widgets in a grid layout for better UI
     widgets = [
         (directory_dropdown_label, directory_dropdown,None),
@@ -282,8 +254,7 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
         (spk_freq_label, None,None),
         (filter_choice_widget,None,None),
         (mel_filter_plot_radio_widget,None,None),
-        (save_button_widget,filename_label,filename_entry),
-        (field1,field2,field3)
+        (save_button_widget,filename_label,filename_entry)
     ]
         
 
