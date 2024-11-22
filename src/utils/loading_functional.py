@@ -82,7 +82,7 @@ def load_parameters_from_pth(file_path):
     Returns:
     - params (dict): Extracted hyperparameters.
     """
-    print(f"file_path: {file_path} (type: {type(file_path)})")
+    # print(f"file_path: {file_path} (type: {type(file_path)})")
     if not file_path.endswith(".pth"):
         raise ValueError("Only .pth files are supported.")
 
@@ -90,9 +90,9 @@ def load_parameters_from_pth(file_path):
         checkpoint = torch.load(file_path)
         if "hyperparameters" in checkpoint:
             params = checkpoint["hyperparameters"]
-            print("Extracted Parameters from .pth file:")
-            for key, value in params.items():
-                print(f"{key}: {value}")
+            # print("Extracted Parameters from .pth file:")
+            # for key, value in params.items():
+            #     print(f"{key}: {value}")
             return params
         else:
             raise ValueError("The .pth file does not contain hyperparameters.")
@@ -125,7 +125,7 @@ def custom_collate_fn(batch, params, target_labels, pth_file_path):
     except KeyError as e:
         raise ValueError(f"Missing required parameter: {e}")
 
-    print(f" read and used from pth => n_fft: {n_fft}, hop_length: {hop_length}, n_mels: {n_mels}, f_min: {f_min}, f_max: {f_max}, threshold: {threshold}")
+    # print(f" read and used from pth => n_fft: {n_fft}, hop_length: {hop_length}, n_mels: {n_mels}, f_min: {f_min}, f_max: {f_max}, threshold: {threshold}")
 
     tensors, targets = [], []
 
@@ -133,9 +133,6 @@ def custom_collate_fn(batch, params, target_labels, pth_file_path):
     for waveform, _, label, *_ in batch:
         tensors.append(waveform)
         targets.append(label_to_index(label, target_labels))
-
-    # Combine waveforms into a single tensor
-    # tensors = torch.cat(tensors, dim=0)  # Combine along batch dimension
 
     # Pad the sequence of tensors
     tensors = pad_sequence(tensors)
@@ -166,10 +163,12 @@ def custom_collate_fn(batch, params, target_labels, pth_file_path):
     # Step forward encoding
     base_cums, pos_accum, neg_accum = FU.step_forward_encoding(csum, threshold, neg=True)
     spikes = pos_accum
+    
+    # print(f"spike shape:{spikes.shape}")
 
     # Neuron and spike information
-    num_neurons = spikes.shape[1]  # Dimension for neurons
-    num_spike_index = spikes.shape[2]
+    num_neurons = spikes.shape[2]  # Dimension for neurons
+    num_spike_index = spikes.shape[3]
 
     # Stack targets into a tensor
     targets = torch.tensor(targets)
@@ -177,158 +176,29 @@ def custom_collate_fn(batch, params, target_labels, pth_file_path):
     return spikes, targets, num_neurons, base_cums
 
 
-def load_pth_file(self):
-    """
-    Open file dialog to load a .pth file and extract hyperparameters.
-    """
-    file_path = filedialog.askopenfilename(
-        title="Select a .pth File",
-        filetypes=(("PTH Files", "*.pth"), ("All Files", "*.*"))
-    )
-    if not file_path:
-        self.status_label.config(text="Status: No file selected.")
-        return
+# def load_pth_file(self):
+#     """
+#     Open file dialog to load a .pth file and extract hyperparameters.
+#     """
+#     file_path = filedialog.askopenfilename(
+#         title="Select a .pth File",
+#         filetypes=(("PTH Files", "*.pth"), ("All Files", "*.*"))
+#     )
+#     if not file_path:
+#         self.status_label.config(text="Status: No file selected.")
+#         return
     
-    try:
-        self.params = load_parameters_from_pth(file_path)
-        self.status_label.config(text=f"Status: Loaded parameters from {file_path}")
-        print("Loaded Parameters:")
-        for key, value in self.params.items():
-            print(f"{key}: {value}")
-        messagebox.showinfo("Success", "Parameters loaded successfully!")
-    except Exception as e:
-        self.status_label.config(text="Status: Failed to load parameters.")
-        messagebox.showerror("Error", f"Failed to load parameters: {e}")
-            
-# def custom_collate_fn(batch, params, target_labels,pth_file_path):
-#     """
-#     Custom collate function for DataLoader to process audio batches.
-
-#     Parameters:
-#     - batch (list): List of data samples containing (waveform, _, label, ...).
-#     - params (dict): Dictionary of hyperparameters.
-#     - target_labels (list): List of target labels for encoding.
-
-#     Returns:
-#     - tensors (torch.Tensor): Transformed tensor of audio data.
-#     - targets (torch.Tensor): Encoded target labels.
-#     - neuron_number (int): Number of neurons (last dimension of tensors).
-#     - base_cums (torch.Tensor): Cumulative sum tensor for SNN encoding.
-#     """
-#     tensors, targets = [], []
-
-#     params = load_parameters_from_pth(pth_file_path)
-#     # Step 2: Populate variables for collate function
 #     try:
-#         n_fft = params["n_fft"]
-#         hop_length = params["hop_length"]
-#         n_mels = params["n_mels"]
-#         f_min = params["f_min"]
-#         f_max = params["f_max"]
-#         threshold = params["sf_threshold"]
-#         filter = params["filter_type_custom_or_standard"]
-#         sample_rate = params["wav_file_samples"]
-#     except KeyError as e:
-#         raise ValueError(f"Missing required parameter: {e}")
-
-#     print(f" read and used from pth => n_fft: {n_fft}, hop_length: {hop_length}, n_mels: {n_mels}, f_min: {f_min}, f_max: {f_max}, threshold: {threshold}")
-
-
-#     # Collect waveforms and labels
-#     for waveform, _, label, *_ in batch:
-#         tensors.append(waveform)
-#         targets.append(label_to_index(label, target_labels))
-
-#     # Pad the sequence of tensors
-#     # tensors = pad_sequence(tensors)
-
-#     # Apply MelSpectrogram transformation
-#     # transform = T.MelSpectrogram(
-#     #     sample_rate=16000,
-#     #     n_fft=n_fft,
-#     #     hop_length=hop_length,
-#     #     n_mels=n_mels,
-#     #     f_min=f_min,
-#     #     f_max=f_max
-#     # )
-#     # spectral_tensor = transform(tensors)
-    
-#     spectrogram_transform = Spectrogram(n_fft=n_fft, hop_length=hop_length, power=1.0)
-#     spectrogram = spectrogram_transform(waveform)    
-
-#     # Initialize CustomMelScale with the filter type and configuration
-#     custom_mel_scale = CustomMelScale(
-#         n_mels=n_mels,
-#         sample_rate=sample_rate,
-#         f_min=f_min,
-#         f_max=f_max,
-#         n_stft=n_fft // 2 + 1,
-#         filter_type=filter
-#     )
-
-#     # # Apply the CustomMelScale transformation to the spectrogram
-#     mel_spectrogram = custom_mel_scale(spectrogram)
-#     original_min, original_max = mel_spectrogram.min(), mel_spectrogram.max()
-#     mel_spectrogram_normalized = FU.normalize(mel_spectrogram, normalize_to=1)
-    
-#     delta_t = 1 / sample_rate
-#     csum = torch.cumsum(mel_spectrogram_normalized, dim=-1) * delta_t
-
-#     # Compute cumulative sum and apply step forward encoding
-#     base_cums, pos_accum, neg_accum = FU.step_forward_encoding(csum, threshold, neg=True)
-#     spikes = pos_accum
-    
-#     num_neurons = spikes.shape[0]
-#     num_spike_index = spikes.shape[1]
-
-#     # Concatenate positive and negative accumulated signals
-#     #tensors = torch.cat((pos_accum, neg_accum), dim=2)
-
-#     # Prepare targets and compute neuron number
-#     targets = torch.stack(targets)
-#     neuron_number = tensors.shape[2]  # Number of neurons
-
-#     return spikes, targets, neuron_number, base_cums            
-
-# from utils import parse_hyperparameter_file, prepare_datasets, custom_collate_fn
-# from torch.utils.data import DataLoader
-
-# if __name__ == "__main__":
-#     # Parse hyperparameters from file
-#     # params = parse_hyperparameter_file("./hyperparam/hyperparameters.txt")
-
-#     # Prepare datasets
-#     train_set, test_set, target_labels = prepare_datasets(
-#         data_path="/project/data/GSC/",
-#         check_labels=True
-#     )
-
-#     # Create DataLoader
-#     train_loader = DataLoader(
-#         dataset=train_set,
-#         batch_size=256,  # Use parsed batch size
-#         collate_fn=lambda batch: custom_collate_fn(batch, params, target_labels)
-#     )
-
-#     # Test the DataLoader
-#     for batch_idx, (tensors, targets, neuron_number, base_cums) in enumerate(train_loader):
-#         print(f"Batch {batch_idx}:")
-#         print(f"Tensors shape: {tensors.shape}")
-#         print(f"Targets shape: {targets.shape}")
-#         print(f"Neuron number: {neuron_number}")
-#         print(f"Base cums shape: {base_cums.shape}")
-
-#     # Check a few batches to validate `custom_collate_fn`
-#     for batch_idx, (tensors, targets, neuron_number, base_cums) in enumerate(train_loader):
-#         print(f"\n--- Batch {batch_idx} ---")
-#         print(f"Tensors shape: {tensors.shape}")  # Should match [batch_size, ..., neuron_number]
-#         print(f"Targets shape: {targets.shape}")  # Should match [batch_size]
-#         print(f"Neuron number: {neuron_number}")  # Confirm expected neurons
-#         print(f"Base cums shape: {base_cums.shape}")  # Check cumulative sum shape
-
-#         # Break after testing a few batches to avoid excessive output
-#         if batch_idx == 2:
-#             break
+#         self.params = load_parameters_from_pth(file_path)
+#         self.status_label.config(text=f"Status: Loaded parameters from {file_path}")
+#         print("Loaded Parameters:")
+#         for key, value in self.params.items():
+#             print(f"{key}: {value}")
+#         messagebox.showinfo("Success", "Parameters loaded successfully!")
+#     except Exception as e:
+#         self.status_label.config(text="Status: Failed to load parameters.")
+#         messagebox.showerror("Error", f"Failed to load parameters: {e}")
+            
 
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -339,6 +209,11 @@ from utils.functional import step_forward_encoding, normalize
 from torchaudio.transforms import Spectrogram
 from core.CustomMelScale import CustomMelScale
 from libs.SNNnanosenpy import SubsetSC, get_unique_labels, label_to_index
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import numpy as np
+
 # from utils.training_functional import load_parameters_from_pth
 
 class TestCollateApp:
@@ -356,7 +231,23 @@ class TestCollateApp:
         self.status_label = tk.Label(parent, text="Status: Waiting for input...")
         self.status_label.pack(padx=10, pady=10)
         
-        self.params = None  # Store parameters loaded from the .pth file
+        # Matplotlib figure for spike visualization
+        fig = Figure(figsize=(5, 4), dpi=100)
+        self.ax = fig.add_subplot(111)
+        self.canvas = FigureCanvasTkAgg(fig, master=parent)
+        self.canvas_widget = self.canvas.get_tk_widget()
+        self.canvas_widget.pack(padx=10, pady=5)        
+        
+        # Initialize parameters and figure for plotting
+        self.params = None
+        self.pth_file_path = None
+        self.last_spikes = None
+        self.last_num_neurons = None
+        self.last_num_spike_index = None
+
+        self.fig, self.ax = plt.subplots(figsize=(8, 6))
+        self.canvas = FigureCanvasTkAgg(self.fig, master=parent)
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)        
         
     def load_pth_file(self):
         """
@@ -386,60 +277,6 @@ class TestCollateApp:
             self.status_label.config(text="Status: Failed to load parameters.")
             messagebox.showerror("Error", f"Failed to load parameters: {e}")
         
-
-    # def test_collate_function(self):
-    #     """
-    #     Test the custom collate function using the loaded parameters.
-    #     """
-        
-    #     # Prepare datasets
-    #     train_set, test_set, target_labels = prepare_datasets(
-    #         data_path="/project/data/GSC/",  # Adjust path to your dataset
-    #         check_labels=True  # Prints labels to verify correctness
-    #     )        
-        
-    #     try:
-    #         # Ensure a .pth file has been loaded and parameters are available
-    #         if not self.params:
-    #             raise ValueError("No parameters loaded. Please load a .pth file first.")
-            
-    #         if not hasattr(self, 'pth_file_path') or not self.pth_file_path:
-    #             raise ValueError("No .pth file path available. Please load a .pth file first.")
-            
-    #         # Prepare a simulated batch for testing (mock data)
-    #         sample_batch = [
-    #             (torch.rand(1, 16000), None, "yes"),  # Mock waveform, placeholder, and label
-    #             (torch.rand(1, 16000), None, "no")   # Mock waveform, placeholder, and label
-    #         ]
-
-    #         # Example target labels (update based on your dataset)
-    #         target_labels = ["yes", "no"]
-
-    #         # Call the custom_collate_fn with loaded parameters
-    #         spikes, targets, neuron_number, base_cums = custom_collate_fn(
-    #             batch=sample_batch,
-    #             params=self.params,
-    #             target_labels=target_labels,
-    #             pth_file_path=self.pth_file_path
-    #         )
-
-    #         # Print debug information
-    #         print(f"Test succeeded!")
-    #         print(f"Neuron number: {neuron_number}")
-    #         print(f"Spikes shape: {spikes.shape}")
-    #         print(f"Targets shape: {targets.shape}")
-    #         print(f"Base cums shape: {base_cums.shape}")
-
-    #         # Update status in the UI
-    #         self.status_label.config(text="Status: Collate function test succeeded!", fg="green")
-
-    #         # Inform the user through a messagebox
-    #         messagebox.showinfo("Success", "Collate function tested successfully!")
-    #     except Exception as e:
-    #         # Handle exceptions and provide feedback
-    #         print(f"Collate function test failed: {e}")
-    #         messagebox.showerror("Error", f"Collate function test failed: {e}")
-    #         self.status_label.config(text="Status: Collate function test failed.", fg="red")
     def test_collate_function(self):
         """
         Test the custom collate function using real data and the loaded parameters.
@@ -474,7 +311,16 @@ class TestCollateApp:
                 print(f"Targets shape: {targets.shape}")  # Shape of target labels
                 print(f"Neuron number: {neuron_number}")  # Number of neurons
                 print(f"Base cumulative sums shape: {base_cums.shape}")  # Cumulative sums
-
+                
+                # Plot spikes using matplotlib
+                import display.batch_plotting as bplt
+                bplt.plot_spikes(
+                    spikes=spikes,
+                    num_neurons=neuron_number,
+                    num_spike_index=spikes.shape[3],
+                    canvas=self.canvas,
+                    ax=self.ax
+                )
                 # Break after a few batches to limit output
                 if batch_idx == 2:
                     break

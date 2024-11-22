@@ -6,7 +6,8 @@ import ipywidgets as widgets # ideiglenes
 import utils.functional as FU
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-import src.config.config as config
+# import src.config.config as config
+import config.config as config
 
 # Function to update the audio waveform
 def plot_waveform(x_values, waveform, canvas, ax):

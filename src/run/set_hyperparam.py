@@ -58,16 +58,18 @@ def create_hyperparameter_fields(parent):
         ("N Mels", config.DEFAULT_N_MELS, tk.IntVar),
         ("N FFT", config.DEFAULT_N_FFT, tk.IntVar),
         ("Wav File Samples", 16000, tk.IntVar),
-        ("Timestep (to calc.)", TF.calculate_num_of_frames_constant(), tk.IntVar), # should be calculated
+        ("Timestep Calculated", TF.calculate_num_of_frames_constant(), tk.IntVar), # should be calculated
         ("Filter Type custom or standard", "custom", tk.StringVar),
         
         # SNNModel-specific parameters
-        ("Number of Inputs", TF.calculate_number_of_input_neurons(), tk.IntVar), # should be calculated
+        # ("Number of Inputs", TF.calculate_number_of_input_neurons(), tk.IntVar), # should be calculated
+        ("Number of Inputs", config.NUMBER_OF_INPUTS_TO_NN, tk.IntVar),
         ("Number of Hidden Neurons", config.NUM_HIDDEN_NEURONS, tk.IntVar),
         ("Number of Outputs", config.NUMBER_OF_OUTPUTS_OF_NN, tk.IntVar),
         ("Beta (LIF)", config.BETA_LIF, tk.DoubleVar),
         ("Threshold (LIF)", config.THRESOLD_LIF, tk.DoubleVar),
         ("Device", config.DEVICE, tk.StringVar),
+        ("learning_rate", config.LEARNING_RATE, tk.DoubleVar),
     ]
 
     # Create a frame for the hyperparameters

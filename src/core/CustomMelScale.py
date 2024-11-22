@@ -162,7 +162,7 @@ def custom_melscale_fbanks(
     # very minimu spread is calculated here:
     spread = 2*(sample_rate//2)/(n_freqs-1) # Spread of 3 Hz on either side of each midpoint
     
-    print(f"all_freqs:{all_freqs[0:3]}, few f_pts: {f_pts[0:3]}, spread: {spread} , sample_rate//2: {sample_rate//2}, n_freqs: {n_freqs}")
+    # print(f"all_freqs:{all_freqs[0:3]}, few f_pts: {f_pts[0:3]}, spread: {spread} , sample_rate//2: {sample_rate//2}, n_freqs: {n_freqs}")
     
     # Use your custom triangular filterbank
     fb = create_triangular_filterbank_variable_spread(all_freqs, f_pts, spread)

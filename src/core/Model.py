@@ -6,7 +6,7 @@ import snntorch as snn
 
 # Define Model Parameters (GLOBAL values should be passed here)
 class SNNModel:
-    def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device):
+    def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, learning_rate):
         """
         Initializes the Spiking Neural Network (SNN) with the given parameters.
 
@@ -24,6 +24,7 @@ class SNNModel:
         self.betaLIF = betaLIF
         self.tresholdLIF = tresholdLIF
         self.device = device
+        self.learning_rate = learning_rate
 
         # Surrogate gradient for spiking neuron
         spike_grad = surrogate.fast_sigmoid()
@@ -51,8 +52,14 @@ class SNNModel:
         """
         spk_rec = []
         utils.reset(self.net)  # Resets hidden states for all LIF neurons in the network
-
+        # print(f"data shape{data.shape}")
         for step in range(timestep):
+            # print("Input Data's' shape:", data.shape) #Input Data's' shape: torch.Size([201, 64, 80]) = [time_step, batch_size, neural_number], neural_number is iput size
+            # print("data.size(0) is:",data.size(0)) # data.size(0) is: 201 = time_steps
+            # print("Step:", step)
+            # print("Input Data[step]'s' Shape:", data[step].shape) #Input Data Shape: torch.Size([batch_size, neural_numbers]) = Input Data Shape: torch.Size([64, 80])
+            # print_structure("net(data[step]):",net(data[step]))
+            # print("net(data[step]):",self.net(data[step]).shape)
             spk_out, _ = self.net(data[step])  # Forward pass for one time step
             spk_rec.append(spk_out)
 
