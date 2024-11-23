@@ -71,7 +71,8 @@ figs, axes, canvases = initialize_plots(frames)
 (
     directory_dropdown, 
     file_slider, 
-    n_fft_input, 
+    # n_fft_input, 
+    n_fft_label, n_fft_slider, n_fft_entry,
     hop_length_slider, 
     n_mels_slider, 
     f_min_slider, 
@@ -106,7 +107,10 @@ def update_plot_mel():
     print("update_melspctgrm() triggered")
     #objects updates width widgets' values
     set_mel_config_from_widget_values(
-        mel_config, n_fft_input, hop_length_slider, n_mels_slider, f_min_slider, f_max_slider, 
+        mel_config, 
+        # n_fft_input,
+        n_fft_slider, 
+        hop_length_slider, n_mels_slider, f_min_slider, f_max_slider, 
         power_toggle, 
         filter_choice_widget,
         mel_filter_plot_radio_widget
@@ -127,6 +131,7 @@ def update_plot_spike():
     
     #calculation:
     num_neurons, num_spike_index, spikes, _, _ = FU.generate_spikes(audio_sample, mel_config, spike_threshold_updated, norm_inp=False, norm_cumsum=False)
+    # num_neurons, num_spike_index, spikes, _, _ = FU.generate_spikes_from_audio(audio_sample, mel_config, spike_threshold_updated, norm_inp=False, norm_cumsum=False)
     print("spikes calculated")
     # plot spike trains or distribution
     if plot_choice == C.DEFAULT_SPIKE_PLT_PICK:
@@ -193,7 +198,9 @@ def check_filter_type():
 directory_dropdown.bind("<<ComboboxSelected>>", lambda e: update_plot())
 file_slider.config(command=lambda v: update_plot())
 # observ nfft entry
-n_fft_input.bind('<Return>', lambda event: update_plot_mel())
+# n_fft_input.bind('<Return>', lambda event: update_plot_mel())
+n_fft_slider.config(command=lambda v: update_plot_mel())
+n_fft_entry.bind('<Return>', lambda event: update_plot_mel())
 # observ hop length entry
 hop_length_slider.config(command=lambda v: update_plot_mel())
 hop_length_entry.bind('<Return>', lambda event: update_plot_mel())

@@ -122,14 +122,19 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     file_slider = tk.Scale(widget_frame, from_=0, to=len(audio_sample.get_files()) - 1, orient='horizontal')
 
     # FFT Size Entry
+    # n_fft_label = ttk.Label(widget_frame, text='n_fft:')
+    # n_fft_input = ttk.Entry(widget_frame)
+    # n_fft_input.insert(0, int(config.DEFAULT_N_FFT))
+
+    n_fft_var = tk.IntVar(value=config.DEFAULT_N_FFT)
     n_fft_label = ttk.Label(widget_frame, text='n_fft:')
-    n_fft_input = ttk.Entry(widget_frame)
-    n_fft_input.insert(0, int(config.DEFAULT_N_FFT))
+    n_fft_slider = tk.Scale(widget_frame, from_=1, to=1024, orient='horizontal', variable=n_fft_var)
+    n_fft_entry = ttk.Entry(widget_frame, textvariable=n_fft_var, width=5)
 
     
     hop_length_var = tk.IntVar(value=config.DEFAULT_HOP_LENGTH)
     hop_length_label = ttk.Label(widget_frame, text='Hop Length:')
-    hop_length_slider = tk.Scale(widget_frame, from_=1, to=512, orient='horizontal', variable=hop_length_var)
+    hop_length_slider = tk.Scale(widget_frame, from_=1, to=600, orient='horizontal', variable=hop_length_var)
     hop_length_entry = ttk.Entry(widget_frame, textvariable=hop_length_var, width=5)
 
     # Number of Mel Bands Slider    
@@ -241,7 +246,8 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     widgets = [
         (directory_dropdown_label, directory_dropdown,None),
         (file_slider_label, file_slider, None),
-        (n_fft_label, n_fft_input, None),
+        # (n_fft_label, n_fft_input, None),
+        (n_fft_label, n_fft_slider, n_fft_entry),
         (hop_length_label, hop_length_slider,  hop_length_entry),
         (n_mels_label, n_mels_slider, n_mels_entry),
         (f_min_label, f_min_slider, None),
@@ -271,7 +277,8 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     return (
         directory_dropdown, 
         file_slider, 
-        n_fft_input, 
+        # n_fft_input, 
+        n_fft_label, n_fft_slider, n_fft_entry,
         hop_length_slider, 
         n_mels_slider, 
         f_min_slider, 

@@ -2,6 +2,15 @@ import torch as torch
 from torchaudio.transforms import Spectrogram
 from core.CustomMelScale import CustomMelScale
 import torchaudio.transforms as T
+import utils.preprocess_collate as PC
+
+def pad_waveform_to_length(waveform, to=16000):
+
+    if waveform.size(0) < to:
+        padded_waveform = torch.cat([waveform, torch.zeros(to - waveform.size(0))], dim=0)
+    else:
+        padded_waveform = waveform[:to]
+    return padded_waveform
 
 def get_mel_spectrogram(audio_sample, mel_config):
     """
@@ -9,25 +18,32 @@ def get_mel_spectrogram(audio_sample, mel_config):
     """
     waveform, sample_rate = audio_sample.load_waveform()
 
+    waveform = pad_waveform_to_length(waveform=waveform)
+
     #debug:
     # mel_spectrogram = mel_config.debug_transform(waveform)        
     
-    # Apply Spectrogram transformation first, then use CustomMelScale for filtering
-    spectrogram_transform = Spectrogram(n_fft=mel_config.n_fft, hop_length=mel_config.hop_length, power=mel_config.power)
-    spectrogram = spectrogram_transform(waveform)    
+    # # Apply Spectrogram transformation first, then use CustomMelScale for filtering
+    # spectrogram_transform = Spectrogram(n_fft=mel_config.n_fft, hop_length=mel_config.hop_length, power=mel_config.power)
+    # spectrogram = spectrogram_transform(waveform)    
 
-    # Initialize CustomMelScale with the filter type and configuration
-    custom_mel_scale = CustomMelScale(
-        n_mels=mel_config.n_mels,
-        sample_rate=mel_config.sample_rate,
-        f_min=mel_config.f_min,
-        f_max=mel_config.f_max,
-        n_stft=mel_config.n_fft // 2 + 1,
-        filter_type=mel_config.filter_type
-    )
+    # # Initialize CustomMelScale with the filter type and configuration
+    # custom_mel_scale = CustomMelScale(
+    #     n_mels=mel_config.n_mels,
+    #     sample_rate=mel_config.sample_rate,
+    #     f_min=mel_config.f_min,
+    #     f_max=mel_config.f_max,
+    #     n_stft=mel_config.n_fft // 2 + 1,
+    #     filter_type=mel_config.filter_type
+    # )
 
-    # # Apply the CustomMelScale transformation to the spectrogram
-    mel_spectrogram = custom_mel_scale(spectrogram)
+    # # # Apply the CustomMelScale transformation to the spectrogram
+    # mel_spectrogram = custom_mel_scale(spectrogram)
+    
+    mel_spectrogram, sample_rate, custom_mel_scale = PC.gen_melspecrogram_common(
+        waveform, mel_config.n_mels, sample_rate, mel_config.f_min, mel_config.f_max, 
+        mel_config.filter_type, mel_config.n_fft, mel_config.hop_length, mel_config.power, center=True
+        )
     
     return mel_spectrogram, sample_rate, custom_mel_scale
 
@@ -79,30 +95,90 @@ def denormalize(tensor, original_min, original_max):
 #     """Normalize the mel spectrogram globally to a 0-1 range."""
 #     return (mel_spectrogram - mel_spectrogram.min()) / (mel_spectrogram.max() - mel_spectrogram.min())
 
-def generate_spikes(audio_sample, mel_config, threshold, norm_inp=True, norm_cumsum=True):
+# original working for preprocess examination of main_demonstrate_s2s.py 
+def generate_spikes(audio_sample, mel_config, threshold, norm_inp=False, norm_cumsum=False):
     mel_spectrogram, sample_rate, _ = get_mel_spectrogram(audio_sample, mel_config)
+    #normalize melspectrogram output
+    mel_spectrogram = normalize(mel_spectrogram)
     
+    ##  SET TO FALSE IN SIGNITURE ALWAYS:
     if norm_inp:
         original_min, original_max = mel_spectrogram.min(), mel_spectrogram.max()
         mel_spectrogram = normalize(mel_spectrogram)
     else:
         original_min, original_max = None, None  # No normalization applied
-    
+ 
     delta_t = 1 / sample_rate
     csum = torch.cumsum(mel_spectrogram, dim=-1) * delta_t
     
+    ##  SET TO FALSE IN SIGNITURE ALWAYS:
     if norm_cumsum:
         csum_min, csum_max = csum.min(), csum.max()
         csum = normalize(csum)
     else:
         csum_min, csum_max = None, None  # No normalization applied to cumulative sum
 
-    base_cum, pos_cum, neg_cum = step_forward_encoding(csum, threshold)
+    base_cum, pos_cum, neg_cum = step_forward_encoding(batch=csum, thr=threshold, neg=False)
     spikes = pos_cum
     num_neurons = spikes.shape[0]
     num_spike_index = spikes.shape[1]
-    
+    print(f"spikes type from generate_spikes() func:{type(spikes)} and shape:{spikes.shape}")
     return num_neurons, num_spike_index, spikes, (original_min, original_max), (csum_min, csum_max)
+
+import utils.preprocess_collate as PC
+# developped under the test for preprocess examination to replace  generate_spikes in main_demonstrate_s2s.py
+def generate_spikes_from_audio(audio_sample, mel_config, threshold, norm_inp=None, norm_cumsum=None):
+    """
+    Generates spikes from a single audio_sample using preprocess_collate and returns results
+    in the format of generate_spikes.
+
+    Args:
+        audio_sample: Single audio sample to process.
+        mel_config: Configuration object with spectrogram parameters.
+        threshold: Threshold for spike encoding.
+
+    Returns:
+        num_neurons: Number of neurons in the spike data.
+        num_spike_index: Spike index information.
+        spikes: Encoded spike data.
+        (original_min, original_max): Min and max of mel-spectrogram before normalization.
+        (csum_min, csum_max): Min and max of cumulative sum.
+    """
+    
+    # Extract the waveform from the audio sample
+    waveform, sample_rate = audio_sample.load_waveform()
+
+    # Create a fake batch: Wrap the waveform in a list
+    tensors = [waveform.unsqueeze(0)]  # Shape: [1, samples]
+    targets = [0]  # Dummy target for compatibility with preprocess_collate
+
+    
+    # Extract parameters from mel_config
+    n_fft = mel_config.n_fft
+    hop_length = mel_config.hop_length
+    n_mels = mel_config.n_mels
+    sample_rate = mel_config.sample_rate
+    f_min = mel_config.f_min
+    f_max = mel_config.f_max
+    filter_type = mel_config.filter_type
+
+    # Call preprocess_collate without changing it
+    spikes, _, num_neurons, base_cums = PC.preprocess_collate(
+        tensors, targets, n_fft, hop_length, n_mels, sample_rate, f_min, f_max, threshold, filter_type
+    )
+    
+    # Remove batch and channel dimensions
+    spikes = spikes.squeeze(0).squeeze(0)  # Shape becomes [22, 801]    
+    
+    print(f"spikes type from generate_spikes_from_audio() func:{type(spikes)} and shape:{spikes.shape}")
+    # Calculate additional values
+    original_min, original_max = spikes.min().item(), spikes.max().item()
+    csum_min, csum_max = base_cums.min().item(), base_cums.max().item()
+
+    # Return in the format of generate_spikes
+    num_spike_index = spikes.shape[1]  # Spike index dimension
+    return num_neurons, num_spike_index, spikes, (original_min, original_max), (csum_min, csum_max)
+
 
 def inverse_generate_spikes(spikes, mel_config, sample_rate, threshold, 
                             norm_inp=True, norm_cumsum=True, 

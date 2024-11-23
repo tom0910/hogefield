@@ -147,6 +147,14 @@ def open_file_and_load_data(hyperparameter_widgets):
     except Exception as e:
         messagebox.showerror("Error", f"Failed to read file: {str(e)}")
 
+class Hyperparam:
+    def __init__(self, label, value):
+        self.label = label
+        self.value = value
+
+    def __repr__(self):
+        return f"Hyperparam(label={self.label}, value={self.value})"
+
 def save_parameters_to_file(hyperparameter_widgets, model_id_var):
     """
     Save the current hyperparameter values to a file in 'key: value' format.
@@ -195,7 +203,56 @@ def save_to_last_file(hyperparameter_widgets):
                 file.write(f"{label.lower().replace(' ', '_')}: {value}\n")
             messagebox.showinfo("Success", f"Parameters saved to {last_file_path} (Model ID: {model_id_var.get()})")
     except Exception as e:
-        messagebox.showerror("Error", f"Failed to save file: {str(e)}")  
+        messagebox.showerror("Error", f"Failed to save file: {str(e)}") 
+
+import subprocess
+import pickle   
+     
+def run_second_app():
+    subprocess.Popen(
+        # ["python3", "src/t_run/secoundApp.py"], 
+        ["python3", "/project/src/run/side_demonstrate_s2s.py"], 
+        start_new_session=True
+        )   
+def refresh_hyperparams():
+    hyperparams = create_hyperparams(hyperparameter_widgets)
+    
+    # Serialize the hyperparameters to a file
+    with open("hyperparams.pkl", "wb") as file:
+        pickle.dump(hyperparams, file)
+    
+    # Create a notification file to signal the second app
+    with open("notification.txt", "w") as file:
+        file.write("Data Updated")
+    print("Hyperparameters refreshed and sent to the second app!")     
+    
+def print_hyperparams(params):
+    for label, value in vars(params).items():
+        print(f"{label}: {value}")
+    
+    
+from types import SimpleNamespace
+import re    
+def create_hyperparams(hyperparameter_widgets):
+    hyperparams = []
+    for label, widget in hyperparameter_widgets:
+        value = widget.get()
+        hyperparams.append(Hyperparam(label, value))
+        
+    # Convert labels to valid Python attribute names
+    def format_label(label):
+        label = re.sub(r'\W|^(?=\d)', '_', label).lower()
+        return label.rstrip('_')
+    params = SimpleNamespace(**{format_label(param.label): param.value for param in hyperparams})
+    print_hyperparams(params)        
+
+    # params = SimpleNamespace(**{param.label: param.value for param in hyperparams})
+    
+    # Print all collected hyperparameters
+    # for param in hyperparams:
+    #     print(param)  # Example output: Hyperparam(label=learning_rate, value=0.01)
+    
+    return params  # Return the list of Hyperparam objects         
 
 if __name__ == "__main__":
     root = tk.Tk()
@@ -234,5 +291,13 @@ if __name__ == "__main__":
         command=lambda: save_parameters_to_file(hyperparameter_widgets, model_id_var)
     )
     save_button.grid(row=5, column=0, padx=10, pady=10)
+    
+    # Create a button to launch the other app
+    
+    open_app = tk.Button(root, text="Run Second App", command=run_second_app)
+    open_app.grid(row=7, column=0, padx=10, pady=10)
+    refresh_app = tk.Button(root, text="Refresh Hyperparameters", command=refresh_hyperparams)
+    refresh_app.grid(row=8, column=0, padx=10, pady=10)
+
 
     root.mainloop()

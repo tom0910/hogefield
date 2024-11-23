@@ -107,6 +107,8 @@ def pad_sequence(batch):
     # Permute back
     return batch.permute(0, 2, 1)
 
+import utils.preprocess_collate as collate
+
 def custom_collate_fn(batch, params, target_labels, pth_file_path):
     """
     Custom collate function for DataLoader to process audio batches.
@@ -134,46 +136,52 @@ def custom_collate_fn(batch, params, target_labels, pth_file_path):
         tensors.append(waveform)
         targets.append(label_to_index(label, target_labels))
 
-    # Pad the sequence of tensors
-    tensors = pad_sequence(tensors)
+    spikes, new_targets, num_neurons, base_cums = collate.preprocess_collate(
+        tensors=tensors, targets=targets, n_fft=n_fft, hop_length=hop_length, 
+        n_mels=n_mels, sample_rate=sample_rate, f_min=f_min, f_max=f_max, threshold=threshold, filter=filter
+        )
+    return spikes, new_targets, num_neurons, base_cums 
     
-    # Spectrogram transformation
-    spectrogram_transform = Spectrogram(n_fft=n_fft, hop_length=hop_length, power=1.0,center=True) # center: Adds (n_fft // 2) zero-padding on both sides of the input signal, which can ensure alignment and better frequency analysis at the edges.
-    spectrogram = spectrogram_transform(tensors)
-
-    # Initialize CustomMelScale with the filter type and configuration
-    custom_mel_scale = CustomMelScale(
-        n_mels=n_mels,
-        sample_rate=sample_rate,
-        f_min=f_min,
-        f_max=f_max,
-        n_stft=n_fft // 2 + 1,
-        filter_type=filter
-    )
-
-    # Apply the CustomMelScale transformation
-    mel_spectrogram = custom_mel_scale(spectrogram)
-    original_min, original_max = mel_spectrogram.min(), mel_spectrogram.max()
-    mel_spectrogram_normalized = FU.normalize(mel_spectrogram, normalize_to=1)
-
-    # Time-step adjustment
-    delta_t = 1 / sample_rate
-    csum = torch.cumsum(mel_spectrogram_normalized, dim=-1) * delta_t
-
-    # Step forward encoding
-    base_cums, pos_accum, neg_accum = FU.step_forward_encoding(csum, threshold, neg=True)
-    spikes = pos_accum
+    # # Pad the sequence of tensors
+    # tensors = pad_sequence(tensors)
     
-    # print(f"spike shape:{spikes.shape}")
+    # # Spectrogram transformation
+    # spectrogram_transform = Spectrogram(n_fft=n_fft, hop_length=hop_length, power=1.0,center=True) # center: Adds (n_fft // 2) zero-padding on both sides of the input signal, which can ensure alignment and better frequency analysis at the edges.
+    # spectrogram = spectrogram_transform(tensors)
 
-    # Neuron and spike information
-    num_neurons = spikes.shape[2]  # Dimension for neurons
-    num_spike_index = spikes.shape[3]
+    # # Initialize CustomMelScale with the filter type and configuration
+    # custom_mel_scale = CustomMelScale(
+    #     n_mels=n_mels,
+    #     sample_rate=sample_rate,
+    #     f_min=f_min,
+    #     f_max=f_max,
+    #     n_stft=n_fft // 2 + 1,
+    #     filter_type=filter
+    # )
 
-    # Stack targets into a tensor
-    targets = torch.tensor(targets)
+    # # Apply the CustomMelScale transformation
+    # mel_spectrogram = custom_mel_scale(spectrogram)
+    # original_min, original_max = mel_spectrogram.min(), mel_spectrogram.max()
+    # mel_spectrogram_normalized = FU.normalize(mel_spectrogram, normalize_to=1)
 
-    return spikes, targets, num_neurons, base_cums
+    # # Time-step adjustment
+    # delta_t = 1 / sample_rate
+    # csum = torch.cumsum(mel_spectrogram_normalized, dim=-1) * delta_t
+
+    # # Step forward encoding
+    # base_cums, pos_accum, neg_accum = FU.step_forward_encoding(csum, threshold, neg=True)
+    # spikes = pos_accum
+    
+    # # print(f"spike shape:{spikes.shape}")
+
+    # # Neuron and spike information
+    # num_neurons = spikes.shape[2]  # Dimension for neurons
+    # num_spike_index = spikes.shape[3]
+
+    # # Stack targets into a tensor
+    # targets = torch.tensor(targets)
+
+    # return spikes, targets, num_neurons, base_cums
 
 
 # def load_pth_file(self):
