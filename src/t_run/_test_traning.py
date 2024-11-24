@@ -25,7 +25,7 @@ model = SNNModel(
     device          = paramsSNN["device"],
     learning_rate   = paramsSNN["learning_rate"],
 )
-optimizer, loss_fn = create_optimizer(net_params=model.net.parameters(), learning_rate=params["learning_rate"],num_classes=34)
+optimizer, loss_fn = create_optimizer(net_params=model.net.parameters(), learning_rate=params["learning_rate"],num_classes=35)
 num_epochs = 100
 
 # Paths

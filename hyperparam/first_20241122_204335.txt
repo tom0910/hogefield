@@ -1,5 +1,5 @@
 batch_size: 128
-sf_threshold: 0.0042
+sf_threshold: 4.2e-05
 hop_length: 20
 f_min: 300
 f_max: 8000
@@ -12,6 +12,6 @@ number_of_inputs: 16
 number_of_hidden_neurons: 1024
 number_of_outputs: 35
 beta_(lif): 0.9
-threshold_(lif): 0.6
+threshold_(lif): 0.7
 device: cuda
 learning_rate: 0.0002

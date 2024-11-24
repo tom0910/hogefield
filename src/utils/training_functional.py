@@ -64,9 +64,10 @@ def calculate_number_of_input_neurons():
     
 import utils
 
+from snntorch import utils as snn_utils
 def forward_pass(net, data, timestep):  #nem ezt használom 
   spk_rec = []
-  utils.reset(net)  # resets hidden states for all LIF neurons in net
+  snn_utils.reset(net)  # resets hidden states for all LIF neurons in net
   # ha a number of time steps biztos egyenlő a spectogramban az x tengely adatainak számával:
   #for step in range(data.size(0)):  # data.size(0) = number of time steps
   for step in range(timestep):

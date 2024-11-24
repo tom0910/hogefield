@@ -21,6 +21,7 @@ def train(
     checkpoint, start_epoch, loss_hist, acc_hist = FT.load_latest_checkpoint(checkpoint_dir, model, optimizer)
     timestep    = params["timestep_calculated"]
     device      = params["device"]
+    print(f"here fails device check: {device}")
     
 
     # Setup for training
@@ -48,10 +49,10 @@ def train(
             acc = SNNF.accuracy_rate(spk_rec, targets)
             acc_hist.append(acc)
 
-            if counter % 10 == 0:  # Update plot png every 10 iterations
+            if counter % 100 == 0:  # Update plot png every 100 iterations
                 FT.plot_training(fig, ax1, ax2, loss_hist, acc_hist, plots_dir, f"epoch_{epoch}_iter_{counter}.png")
 
-            if counter % 50 == 0:  # Save checkpoint every 50 iterations
+            if counter % 500 == 0:  # Save checkpoint every 500 iterations
                 checkpoint = {
                     "epoch": epoch,
                     "model_state_dict": model.net.state_dict(),
@@ -66,7 +67,7 @@ def train(
             if counter % len(train_loader) == 0:
                 with torch.no_grad():
                     model.net.eval()
-                    test_acc = FT.batch_accuracy(test_loader, model.net, timestep)
+                    test_acc = FT.batch_accuracy(loader=test_loader, net=model.net, timestep=timestep, device=device)
                     print(f"Iteration {counter}, Test Acc: {test_acc * 100:.2f}%\n")
                     test_acc_hist.append(test_acc.item())
             
@@ -82,7 +83,7 @@ def train(
             "test_acc_hist": test_acc_hist,
             "counter": counter,
         }
-        torch.save(checkpoint, f'p_checkpoints/checkpoint_epoch_{epoch}.pth')
+        # torch.save(checkpoint, f'p_checkpoints/checkpoint_epoch_{epoch}.pth')
         FT.save_checkpoint(checkpoint, checkpoint_dir, f"epoch_{epoch}.pth")
 
     plt.close(fig)
