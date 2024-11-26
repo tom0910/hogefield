@@ -224,6 +224,7 @@ def step_forward_encoding(batch, thr, neg=False):
 
     # Main encoding loop
     for t in range(1, L):
+        # print(f"is string?{type(thr)} and {type(base)}")
         spikes = torch.where(batch[..., t] > base + thr, 1, 0) - torch.where(batch[..., t] < base - thr, 1, 0)
         base += spikes * thr
         out[..., t] = spikes

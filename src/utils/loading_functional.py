@@ -72,32 +72,72 @@ import libs.SNNnanosenpy as snnnspy
 from torchaudio.transforms import Spectrogram
 from core.CustomMelScale import CustomMelScale
 
+import torch
+import re
+
 def load_parameters_from_pth(file_path):
     """
-    Load parameters from a .pth file.
+    Load and standardize hyperparameters from a .pth file.
 
     Parameters:
     - file_path (str): Path to the .pth file.
 
     Returns:
-    - params (dict): Extracted hyperparameters.
+    - params (dict): Extracted and standardized hyperparameters.
     """
-    # print(f"file_path: {file_path} (type: {type(file_path)})")
     if not file_path.endswith(".pth"):
         raise ValueError("Only .pth files are supported.")
 
     try:
+        # Load checkpoint
         checkpoint = torch.load(file_path)
-        if "hyperparameters" in checkpoint:
-            params = checkpoint["hyperparameters"]
-            # print("Extracted Parameters from .pth file:")
-            # for key, value in params.items():
-            #     print(f"{key}: {value}")
-            return params
-        else:
-            raise ValueError("The .pth file does not contain hyperparameters.")
+
+        # Check for hyperparameters
+        if "hyperparameters" not in checkpoint:
+            raise ValueError("The .pth file does not contain 'hyperparameters' key.")
+
+        params = checkpoint["hyperparameters"]
+
+        # Standardize key names (e.g., "Beta (LIF)" -> "beta_lif")
+        standardized_params = {
+            re.sub(r"[()\s]+", "_", key).strip("_").lower(): value
+            for key, value in params.items()
+        }
+
+        return standardized_params
+
+    except FileNotFoundError:
+        raise ValueError(f"The file {file_path} was not found.")
     except Exception as e:
         raise ValueError(f"Failed to parse .pth file: {e}")
+
+
+# def load_parameters_from_pth(file_path):
+#     """
+#     Load parameters from a .pth file.
+
+#     Parameters:
+#     - file_path (str): Path to the .pth file.
+
+#     Returns:
+#     - params (dict): Extracted hyperparameters.
+#     """
+#     # print(f"file_path: {file_path} (type: {type(file_path)})")
+#     if not file_path.endswith(".pth"):
+#         raise ValueError("Only .pth files are supported.")
+
+#     try:
+#         checkpoint = torch.load(file_path)
+#         if "hyperparameters" in checkpoint:
+#             params = checkpoint["hyperparameters"]
+#             # print("Extracted Parameters from .pth file:")
+#             # for key, value in params.items():
+#             #     print(f"{key}: {value}")
+#             return params
+#         else:
+#             raise ValueError("The .pth file does not contain hyperparameters.")
+#     except Exception as e:
+#         raise ValueError(f"Failed to parse .pth file: {e}")
 
 def pad_sequence(batch):
     # Ensure all items are tensors and have at least 2 dimensions

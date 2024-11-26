@@ -119,7 +119,8 @@ def batch_accuracy(loader, net, timestep, device):
 def create_optimizer(net_params, learning_rate, num_classes, betas=(0.9, 0.999)): 
     # print(f"model params: {net_params}")
     optimizer = torch.optim.Adam(net_params, learning_rate, betas)
-    loss_fn = SNNF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2,population_code=False, num_classes=34)
+    # loss_fn = SNNF.mse_count_loss(correct_rate=0.8, incorrect_rate=0.2,population_code=False, num_classes=34)
+    loss_fn = SNNF.mse_count_loss(correct_rate=0.75, incorrect_rate=0.25,population_code=False)
     return optimizer, loss_fn
 
 def prepare_dataset(pth_file_path, params):

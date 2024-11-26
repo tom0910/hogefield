@@ -1,0 +1,19 @@
+{
+    "batch_size": 128,
+    "sf_threshold": 4.2e-05,
+    "hop_length": 20,
+    "f_min": 300,
+    "f_max": 8000,
+    "n_mels": 16,
+    "n_fft": 512,
+    "wav_file_samples": 16000,
+    "timestep_calculated": 801,
+    "number_of_inputs": 16,
+    "number_of_hidden_neurons": 256,
+    "number_of_outputs": 35,
+    "beta_(lif)": 0.9,
+    "threshold_(lif)": 0.5,
+    "device": "cuda",
+    "learning_rate": 0.0002,
+    "filter_type": "custom"
+}

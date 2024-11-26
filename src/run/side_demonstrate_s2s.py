@@ -275,19 +275,69 @@ if __name__ == "__main__":
     def custom_observer():
         dt_util.observe_notifications_from_app(callback=run_function_on_refresh)
 
+    # def run_function_on_refresh(hyperparams):
+    #     print("Function started with refreshed data from hyperparameters app:")
+    #     # for label, value in vars(hyperparams).items():
+    #     #     print(f"{label}: {value}")
+    #     print(f"sf_threshold:{hyperparams.sf_threshold:}")
+    #     threshold_slider.set(hyperparams.sf_threshold)
+    #     hop_length_slider.set(hyperparams.hop_length)
+    #     f_min_slider.set(hyperparams.f_min )
+    #     f_max_slider.set(hyperparams.f_max )
+    #     n_mels_slider.set(hyperparams.n_mels)
+    #     n_fft_slider.set(hyperparams.n_fft)
+    #     filter_choice_widget.set(hyperparams.filter_type_custom_or_standard)
+    #     # update_plot()
+    
     def run_function_on_refresh(hyperparams):
         print("Function started with refreshed data from hyperparameters app:")
-        # for label, value in vars(hyperparams).items():
-        #     print(f"{label}: {value}")
-        print(f"sf_threshold:{hyperparams.sf_threshold:}")
-        threshold_slider.set(hyperparams.sf_threshold)
-        hop_length_slider.set(hyperparams.hop_length)
-        f_min_slider.set(hyperparams.f_min )
-        f_max_slider.set(hyperparams.f_max )
-        n_mels_slider.set(hyperparams.n_mels)
-        n_fft_slider.set(hyperparams.n_fft)
-        filter_choice_widget.set(hyperparams.filter_type_custom_or_standard)
-        # update_plot()
+        try:
+            # Access attributes directly (aligned with create_hyperparams output)
+            filter_type = hyperparams.filter_type
+
+            # Update UI fields
+            threshold_slider.set(hyperparams.sf_threshold)
+            hop_length_slider.set(hyperparams.hop_length)
+            n_fft_slider.set(hyperparams.n_fft)
+
+            if filter_type == "custom":
+                # Set fixed values and disable fields
+                n_mels_slider.set(16)
+                f_min_slider.set(300)
+                f_max_slider.set(8000)
+                n_mels_slider.config(state="disabled")
+                f_min_slider.config(state="disabled")
+                f_max_slider.config(state="disabled")
+            else:
+                # Enable fields for standard mode
+                n_mels_slider.config(state="normal")
+                f_min_slider.config(state="normal")
+                f_max_slider.config(state="normal")
+                n_mels_slider.set(hyperparams.n_mels)
+                f_min_slider.set(hyperparams.f_min)
+                f_max_slider.set(hyperparams.f_max)
+
+            filter_choice_widget.set(filter_type)
+        except AttributeError as e:
+            print(f"AttributeError: {e}. Ensure hyperparams are aligned with the new code.")
+
+
+
+
+    # def run_function_on_refresh(hyperparams):
+    #     print("Function started with refreshed data from hyperparameters app:")
+    #     try:
+    #         # Access attributes directly (aligned with create_hyperparams output)
+    #         print(f"sf_threshold: {hyperparams.sf_threshold}")
+    #         threshold_slider.set(hyperparams.sf_threshold)
+    #         hop_length_slider.set(hyperparams.hop_length)
+    #         f_min_slider.set(hyperparams.f_min)
+    #         f_max_slider.set(hyperparams.f_max)
+    #         n_mels_slider.set(hyperparams.n_mels)
+    #         n_fft_slider.set(hyperparams.n_fft)
+    #         filter_choice_widget.set(hyperparams.filter_type_custom_or_standard)
+    #     except AttributeError as e:
+    #         print(f"AttributeError: {e}. Ensure hyperparams are aligned with the new code.")
         
     # custom_observer()
     observer_thread = threading.Thread(target=custom_observer, daemon=True)
