@@ -156,14 +156,22 @@ def custom_collate_fn(batch, params, target_labels, pth_file_path):
     # Ensure parameters are loaded
     params = load_parameters_from_pth(pth_file_path)
     try:
-        n_fft = params["n_fft"]
-        hop_length = params["hop_length"]
-        n_mels = params["n_mels"]
-        f_min = params["f_min"]
-        f_max = params["f_max"]
-        threshold = params["sf_threshold"]
+        n_fft = int(params["n_fft"])
+        hop_length = int(params["hop_length"])
+        n_mels = int(params["n_mels"])
+        f_min = float(params["f_min"])
+        f_max = float(params["f_max"])
+        threshold = float(params["sf_threshold"])  # Explicit conversion
         filter = params["filter_type_custom_or_standard"]
-        sample_rate = params["wav_file_samples"]
+        sample_rate = int(params["wav_file_samples"])        
+        # n_fft = params["n_fft"]
+        # hop_length = params["hop_length"]
+        # n_mels = params["n_mels"]
+        # f_min = params["f_min"]
+        # f_max = params["f_max"]
+        # threshold = params["sf_threshold"]
+        # filter = params["filter_type_custom_or_standard"]
+        # sample_rate = params["wav_file_samples"]
     except KeyError as e:
         raise ValueError(f"Missing required parameter: {e}")
 

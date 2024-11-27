@@ -82,6 +82,8 @@ def train(
             "acc_hist": acc_hist,
             "test_acc_hist": test_acc_hist,
             "counter": counter,
+            # Add hyperparameters
+            # "hyperparameters": params,  # Include the hyperparameters here
         }
         # torch.save(checkpoint, f'p_checkpoints/checkpoint_epoch_{epoch}.pth')
         FT.save_checkpoint(checkpoint, checkpoint_dir, f"epoch_{epoch}.pth")

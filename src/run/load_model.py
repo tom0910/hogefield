@@ -92,6 +92,8 @@ class TrainingApp:
             # Load parameters from the JSON file
             with open(file_path, "r") as file:
                 self.params = json.load(file)
+                print({key: type(value) for key, value in self.params.items()})
+
 
             # # Normalize keys to align with set_hyperparameters.py
             # self.params = {
