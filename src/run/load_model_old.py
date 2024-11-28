@@ -12,6 +12,7 @@ from snntorch import functional as SNNF
 import glob   
 import matplotlib.pyplot as plt
 import json
+import re
 
 # Default directory for parameter files
 DEFAULT_PARAM_DIR = "./hyperparam"
@@ -111,77 +112,6 @@ class TrainingApp:
             self.status_label.config(text=f"Status: Failed to load parameters ({e})")
             messagebox.showerror("Error", f"Failed to load parameters: {e}")
 
-
-    # def create_model(self):
-    #     """
-    #     Create an instance of the SNNModel using loaded parameters.
-    #     """
-    #     if not self.params:
-    #         self.status_label.config(text="Status: No parameters loaded.")
-    #         messagebox.showwarning("Warning", "Please load parameters first.")
-    #         return
-
-    #     if not hasattr(self, "loaded_hyperparam_file") or not self.loaded_hyperparam_file:
-    #         self.status_label.config(text="Status: Missing hyperparameter file name.")
-    #         messagebox.showerror("Error", "Failed to identify the hyperparameter file name. Please reload parameters.")
-    #         return
-
-    #     # Folder for saving the model based on the hyperparameter file
-    #     save_dir = os.path.join(DEFAULT_PARAM_DIR, self.loaded_hyperparam_file)
-
-    #     # Ask for confirmation if folder exists
-    #     if os.path.exists(save_dir):
-    #         if not messagebox.askyesno(
-    #             "Overwrite Confirmation",
-    #             f"The folder '{save_dir}' already exists. Do you want to clear it?"
-    #         ):
-    #             self.status_label.config(text="Status: Model creation cancelled.")
-    #             return
-    #         else:
-    #             shutil.rmtree(save_dir)  # Clear the folder
-    #             print(f"Cleared folder: {save_dir}")
-
-    #     os.makedirs(save_dir)  # Create folder
-
-    #     try:
-    #         # Translate file parameters to SNNModel parameters
-    #         params = {
-    #             "num_inputs": self.params["number_of_inputs"],
-    #             "num_hidden": self.params["number_of_hidden_neurons"],
-    #             "num_outputs": self.params["number_of_outputs"],
-    #             "beta_lif": self.params["beta_(lif)"],
-    #             "treshold_lif": self.params["threshold_(lif)"],
-    #             "device": self.params["device"],
-    #             "learning_rate": self.params["learning_rate"],
-    #         }
-
-    #         # Print the parameters being used
-    #         print("Model Parameters:")
-    #         for key, value in params.items():
-    #             print(f"{key}: {value}")
-
-    #         # Create an instance of SNNModel
-    #         self.model = SNNModel(
-    #             num_inputs=params["num_inputs"],
-    #             num_hidden=params["num_hidden"],
-    #             num_outputs=params["num_outputs"],
-    #             betaLIF=params["beta_lif"],
-    #             tresholdLIF=params["treshold_lif"],
-    #             device=params["device"],
-    #             learning_rate=params["learning_rate"],
-    #         )
-
-    #         # Save the model
-    #         model_path = os.path.join(save_dir, f"snn_model_{self.params.get('model_id', 'default')}.pth")
-    #         torch.save({"model_state": self.model.net.state_dict(), "hyperparameters": self.params}, model_path)
-    #         self.status_label.config(text=f"Status: Model saved to {model_path}")
-    #         messagebox.showinfo("Success", f"Model saved successfully to {model_path}")
-    #         print(f"Model saved to {model_path}")
-    #         self.pth_file_path=model_path
-    #         self.training_dir = model_path
-    #     except Exception as e:
-    #         self.status_label.config(text="Status: Failed to create model.")
-    #         messagebox.showerror("Error", f"Failed to create model: {e}")
     
     def create_model(self):
         """
@@ -280,7 +210,7 @@ class TrainingApp:
 
             self.param_entries[key] = entry  # Save the entry widget for later use 
 
-import re
+
 
     def load_pth_params(self):
         """
@@ -325,79 +255,7 @@ import re
             self.status_label.config(text=f"Status: Failed to load parameters ({e})")
             messagebox.showerror("Error", f"Failed to load parameters: {e}")
 
-    
-    # def load_pth_params(self):
-    #     """
-    #     Load parameters from a .pth file and display them in the UI.
-    #     """
-    #     file_path = filedialog.askopenfilename(
-    #         initialdir=DEFAULT_PARAM_DIR,
-    #         title="Select a Model File",
-    #         filetypes=(("PyTorch Model Files", "*.pth"), ("All Files", "*.*"))
-    #     )
-
-    #     if not file_path:
-    #         self.status_label.config(text="Status: No file selected.")
-    #         return
-
-    #     try:
-    #         # Load the .pth file
-    #         checkpoint = torch.load(file_path)
-
-    #         # Extract hyperparameters
-    #         if "hyperparameters" not in checkpoint:
-    #             raise ValueError("The .pth file does not contain hyperparameters.")
-
-    #         self.params = checkpoint["hyperparameters"]
-
-    #         # Track the loaded model name
-    #         self.loaded_hyperparam_file = os.path.basename(file_path).replace(".pth", "")
-
-    #         # Print parameters to the console
-    #         print("Loaded Parameters from .pth:")
-    #         for key, value in self.params.items():
-    #             print(f"{key}: {value}")
-
-    #         # Populate parameters in the UI
-    #         self.populate_param_fields()
-    #         self.status_label.config(text=f"Status: Parameters loaded from {file_path}")
-    #         messagebox.showinfo("Success", "Parameters loaded successfully!")
-    #     except Exception as e:
-    #         self.status_label.config(text=f"Status: Failed to load parameters ({e})")
-    #         messagebox.showerror("Error", f"Failed to load parameters: {e}")
-    
-    # def prepare_dataset(self):
-    #     # Prepare datasets
-    #     train_set, test_set, target_labels = FL.prepare_datasets(
-    #         data_path="/project/data/GSC/",
-    #         check_labels=False
-    #     )
-        
-    #     # Create DataLoader with custom_collate_fn
-    #     self.train_loader = DataLoader(
-    #         dataset=train_set,
-    #         batch_size=int(self.params["batch_size"]),  # Use batch size from parameters
-    #         collate_fn=lambda batch: FL.custom_collate_fn(
-    #             batch=batch,
-    #             params=self.params,
-    #             target_labels=target_labels,
-    #             pth_file_path=self.pth_file_path
-    #         )
-    #     )
-        
-    #     self.test_loader = DataLoader(
-    #         dataset=test_set,
-    #         batch_size=int(self.params["batch_size"]),  # Use batch size from parameters
-    #         shuffle=False,
-    #         collate_fn=lambda batch: FL.custom_collate_fn(
-    #             batch=batch,
-    #             params=self.params,
-    #             target_labels=target_labels,
-    #             pth_file_path=self.pth_file_path
-    #         )
-    #     )
-
-        
+       
     def create_optimizer(self): 
         print(f"model params: {self.model.net.parameters()}")
         self.optimizer = torch.optim.Adam(self.model.net.parameters(), lr=self.model.learning_rate, betas=(0.9, 0.999))
@@ -522,8 +380,8 @@ import re
         acc_hist = []
         test_acc_hist = []
         counter = 1
-        save_every = 2  # Save checkpoint every 2 iterations
-        plot_every = 10   # Plot and save the figure every 10 iterations
+        save_every = 10  # Save checkpoint every 2 iterations
+        plot_every = 100   # Plot and save the figure every 10 iterations
         
         checkpoint_dir=os.path.join(self.training_dir, 'p_checkpoints')
         plots_dir=os.path.join(self.training_dir, 'plots')

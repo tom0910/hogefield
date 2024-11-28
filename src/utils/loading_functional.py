@@ -162,7 +162,8 @@ def custom_collate_fn(batch, params, target_labels, pth_file_path):
         f_min = float(params["f_min"])
         f_max = float(params["f_max"])
         threshold = float(params["sf_threshold"])  # Explicit conversion
-        filter = params["filter_type_custom_or_standard"]
+        # filter = params["filter_type_custom_or_standard"] fails because it has changed to filter_type
+        filter = params["filter_type"]
         sample_rate = int(params["wav_file_samples"])        
         # n_fft = params["n_fft"]
         # hop_length = params["hop_length"]

@@ -4,8 +4,28 @@ from utils.training_functional import prepare_dataset, create_optimizer
 from core.Model import SNNModel
 import utils.loading_functional as FL
 
+import sys
+import os
+
+
+base_dir="/project/hyperparam/hogefieldNum1_20241127_085000/"
+log_file="output.log"
+log_path = os.path.join(base_dir, log_file)
+plots_dir = os.path.join(base_dir,"plots")
+pth_dir = os.path.join(base_dir,"pth")
+model_path = os.path.join(base_dir,"snn_model_default.pth")
+
+# Redirect print statements to a file
+with open(log_file, "w") as log_file:
+    sys.stdout = log_file
+    print("This will go to the file!")
+    
+# Reset stdout back to default
+sys.stdout = sys.__stdout__
+print("This will appear in the terminal.")
+
 # Load parameters from the .pth file
-model_path = "/project/hyperparam/hogefieldAlfa_2hypchang2timeslr__20241126_082710/epoch_16.pth"
+model_path = model_path
 params = FL.load_parameters_from_pth(model_path)  # Updated function ensures normalized keys
 
 # Align keys with SNNModel requirements
@@ -42,8 +62,8 @@ optimizer, loss_fn = create_optimizer(
 
 # Training configuration
 num_epochs = 100
-checkpoint_dir = "/project/hyperparam/hogefieldAlfa_2hypchang2timeslr__20241126_082710/pths"
-plots_dir = "/project/hyperparam/hogefieldAlfa_2hypchang2timeslr__20241126_082710//plots"
+checkpoint_dir = pth_dir
+plots_dir = plots_dir
 
 # Train the model
 train(

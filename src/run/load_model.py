@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader
 from snntorch import functional as SNNF 
 import matplotlib.pyplot as plt
 import re
+import utils.loading_functional as FL
+from utils.training_utils import train
 
 # Default directory for parameter files
 DEFAULT_PARAM_DIR = "./hyperparam"
@@ -21,8 +23,6 @@ class TrainingApp:
         self.parent = parent
         self.parent.title("Training Application")
         self.param_entries = {}  # Dictionary to store parameter entry fields
-        self.pth_file_path = None  # No default value during initialization
-
 
         # Create buttons for the app
         self.load_params_button = tk.Button(parent, text="Load Parameters", command=self.load_params)
@@ -93,19 +93,13 @@ class TrainingApp:
             with open(file_path, "r") as file:
                 self.params = json.load(file)
                 print({key: type(value) for key, value in self.params.items()})
-
-
-            # # Normalize keys to align with set_hyperparameters.py
-            # self.params = {
-            #     re.sub(r"[()\s]+", "_", key).strip("_").lower(): value for key, value in self.params.items()
-            # }
-            
+          
             self.params = {
                 re.sub(r"_{2,}", "_", re.sub(r"[()\s]+", "_", key)).strip("_").lower(): value
                 for key, value in self.params.items()
             }
 
-
+            
             # Track the name of the loaded hyperparameter file (without extension)
             self.loaded_hyperparam_file = os.path.basename(file_path).replace(".json", "")
 
@@ -257,7 +251,17 @@ class TrainingApp:
             entry.insert(0, str(value))  # Pre-fill with the current value
 
             self.param_entries[key] = entry  # Save the entry widget for later use 
-            
+            # Disable specific widgets if filter_type is "custom"
+            filter_type = self.params.get("filter_type", "").lower()
+            if filter_type == "custom":
+                for key in ["f_min", "f_max", "n_mels"]:
+                    if key in self.param_entries:
+                        self.param_entries[key].config(state="disabled")
+            else:
+                for key in ["f_min", "f_max", "n_mels"]:
+                    if key in self.param_entries:
+                        self.param_entries[key].config(state="normal")            
+             
     def start_training(self):
         """
         Start the training process.
@@ -284,9 +288,53 @@ class TrainingApp:
             # Initialize model
             if not self.model:
                 self.create_model()
+                
+                
+            params = FL.load_parameters_from_pth(model_path)   
+            # Align keys with SNNModel requirements
+            paramsSNN = {
+                "num_inputs":       params.get("number_of_inputs", 16),
+                "num_hidden":       params.get("number_of_hidden_neurons", 256),
+                "num_outputs":      params.get("number_of_outputs", 35),
+                "beta_lif":         params.get("beta_lif", 0.9),  # Default if missing
+                "threshold_lif":    params.get("threshold_lif", 0.5),  # Default if missing
+                "device":           params.get("device", "cuda"),
+                "learning_rate":    params.get("learning_rate", 0.0002),
+            }
 
+            # Prepare dataset
+            train_loader, test_loader = prepare_dataset(pth_file_path=model_path, params=params)                
+
+            # Initialize model
+            model = SNNModel(
+                num_inputs      = paramsSNN["num_inputs"],
+                num_hidden      = paramsSNN["num_hidden"],
+                num_outputs     = paramsSNN["num_outputs"],
+                betaLIF         = paramsSNN["beta_lif"],
+                tresholdLIF     = paramsSNN["threshold_lif"],  # Fixed typo from "treshold"
+                device          = paramsSNN["device"],
+                learning_rate   = paramsSNN["learning_rate"],
+            )
+            
+            # Create optimizer and loss function
+            optimizer, loss_fn = create_optimizer(
+                net_params=model.net.parameters(),
+                learning_rate=params.get("learning_rate", 0.0002),
+                num_classes=35,
+            )
             # Start training
-            self.train()
+            # Train the model
+            train(
+                model=model,
+                optimizer=optimizer,
+                train_loader=train_loader,
+                test_loader=test_loader,
+                params=params,
+                loss_fn=loss_fn,
+                num_epochs=self.num_epochs,
+                checkpoint_dir=checkpoint_dir,
+                plots_dir=plots_dir,
+            )
 
             # Update status on completion
             self.status_label.config(text="Status: Training completed!")

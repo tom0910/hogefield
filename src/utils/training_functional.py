@@ -7,7 +7,8 @@ import os
 from snntorch import functional as SNNF 
 import utils.loading_functional as FL
 from torch.utils.data import DataLoader
-import glob  
+import glob
+import re
 
 def calculate_num_frames(L, n_fft, hop_length, center=True, show=False):
     """
@@ -209,9 +210,10 @@ def load_latest_checkpoint(checkpoint_dir, model, optimizer):
     latest_checkpoint = checkpoint_files[-1]
     # print(f"Loading checkpoint: {latest_checkpoint}")
     checkpoint = torch.load(latest_checkpoint)
+    counter = latest_checkpoint.split('/')[-1].split('.')[0].split('_')[-1]
     model.net.load_state_dict(checkpoint["model_state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    return checkpoint, checkpoint["epoch"], checkpoint["loss_hist"], checkpoint["acc_hist"]
+    return checkpoint, checkpoint["epoch"], checkpoint["loss_hist"], checkpoint["acc_hist"], int(counter)
 
 # def plot_training(fig, ax1, ax2, loss_hist, acc_hist, plots_dir, filename):
 #     ax1.clear()

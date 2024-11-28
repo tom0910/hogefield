@@ -18,10 +18,10 @@ def train(
     start_epoch, loss_hist, acc_hist, test_acc_hist, counter = 0, [], [], [], 1
 
     # Load the latest checkpoint
-    checkpoint, start_epoch, loss_hist, acc_hist = FT.load_latest_checkpoint(checkpoint_dir, model, optimizer)
+    checkpoint, start_epoch, loss_hist, acc_hist, counter = FT.load_latest_checkpoint(checkpoint_dir, model, optimizer)
     timestep    = params["timestep_calculated"]
     device      = params["device"]
-    print(f"here fails device check: {device}")
+    print(f"device check: {device}")
     
 
     # Setup for training
@@ -52,7 +52,7 @@ def train(
             if counter % 100 == 0:  # Update plot png every 100 iterations
                 FT.plot_training(fig, ax1, ax2, loss_hist, acc_hist, plots_dir, f"epoch_{epoch}_iter_{counter}.png")
 
-            if counter % 500 == 0:  # Save checkpoint every 500 iterations
+            if counter % 10 == 0:  # Save checkpoint every 500 iterations
                 checkpoint = {
                     "epoch": epoch,
                     "model_state_dict": model.net.state_dict(),
@@ -61,6 +61,8 @@ def train(
                     "acc_hist": acc_hist,
                     "test_acc_hist": test_acc_hist,
                     "counter": counter,
+                    "hyperparameters": {key: value for key, value in params.items() if key not in ["num_inputs", "num_hidden", "num_outputs", "beta_lif", "threshold_lif"]}
+                    
                 }
                 FT.save_checkpoint(checkpoint, checkpoint_dir, f"checkpoint_iter_{counter}.pth")
 
@@ -83,7 +85,7 @@ def train(
             "test_acc_hist": test_acc_hist,
             "counter": counter,
             # Add hyperparameters
-            # "hyperparameters": params,  # Include the hyperparameters here
+            "hyperparameters": {key: value for key, value in params.items() if key not in ["num_inputs", "num_hidden", "num_outputs", "beta_lif", "threshold_lif"]} 
         }
         # torch.save(checkpoint, f'p_checkpoints/checkpoint_epoch_{epoch}.pth')
         FT.save_checkpoint(checkpoint, checkpoint_dir, f"epoch_{epoch}.pth")
