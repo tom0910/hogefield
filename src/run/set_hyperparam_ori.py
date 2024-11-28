@@ -4,6 +4,8 @@ from tkinter import filedialog, messagebox
 import os
 import config.config as config
 import utils.training_functional as TF
+import subprocess
+import pickle 
 
 DEFAULT_DIR = "/project/hyperparam"
 if not os.path.exists(DEFAULT_DIR):  # Create the folder if it doesn't exist
@@ -203,10 +205,7 @@ def save_to_last_file(hyperparameter_widgets):
                 file.write(f"{label.lower().replace(' ', '_')}: {value}\n")
             messagebox.showinfo("Success", f"Parameters saved to {last_file_path} (Model ID: {model_id_var.get()})")
     except Exception as e:
-        messagebox.showerror("Error", f"Failed to save file: {str(e)}") 
-
-import subprocess
-import pickle   
+        messagebox.showerror("Error", f"Failed to save file: {str(e)}")   
      
 def run_second_app():
     subprocess.Popen(
