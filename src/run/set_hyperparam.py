@@ -21,6 +21,8 @@ model = None  # Global variable to store the SNNModel instance
 params = {}  # Global variable to store hyperparameters
 
 last_file_path = None  # Global variable to store the last file path
+pth_saved_dir = None
+pth_save_path = None
 
 HYPERPARAMETERS = [
     ("Model ID", "hogefield", tk.StringVar), 
@@ -54,13 +56,6 @@ def create_model(h_params , model_id_value):
     Create an instance of the SNNModel using loaded parameters and save it.
     """
     global model, last_file_path #,params
-    
-    if h_params is None:
-        print("h_params is None")
-    elif not h_params:
-        print("h_params is empty")
-    else:
-        print("h_params content:", h_params)
 
     # Gather parameters from widgets
     # params = {label.lower().replace(" ", "_"): widget.get() for label, widget in hyperparameter_widgets}
@@ -87,18 +82,74 @@ def create_model(h_params , model_id_value):
             print(f"Cleared folder: {save_dir}")
 
     os.makedirs(save_dir)
-    print("cuda param is:",h_params.get("device", "cuda"))
     
+    global pth_saved_dir
+    pth_saved_dir = save_dir
+
+    model_path = os.path.join(save_dir, f"snn_model_{model_id_value}.pth")
+    # global pth_save_path
+    # pth_save_path = model_path
+    
+    create_and_save_model(h_params=h_params,model_path=model_path)
+    
+    # required_keys = [
+    #     "number_of_inputs", "number_of_hidden_neurons", "number_of_outputs",
+    #     "beta_lif", "threshold_lif", "device", "learning_rate"
+    # ]
+
+    # for key in required_keys:
+    #     if key not in h_params:
+    #         raise KeyError(f"Missing required parameter: '{key}'")
+
+    # # If all keys are present, proceed to construct `translated_params`
+    # translated_params = {
+    #     "num_inputs": int(h_params["number_of_inputs"]),
+    #     "num_hidden": int(h_params["number_of_hidden_neurons"]),
+    #     "num_outputs": int(h_params["number_of_outputs"]),
+    #     "betaLIF": float(h_params["beta_lif"]),
+    #     "tresholdLIF": float(h_params["threshold_lif"]),
+    #     "device": h_params["device"],
+    #     "learning_rate": float(h_params["learning_rate"]),
+    # }
+    
+    
+    # try:
+    #     model = SNNModel(**translated_params)
+    #     torch.save({"model_state": model.net.state_dict(), "hyperparameters": params}, model_path)
+    #     messagebox.showinfo("Success", f"Model saved to {model_path}")
+    #     print(f"Model saved to {model_path}")
+                       
+    # except Exception as e:
+    #     messagebox.showerror("Error", f"Failed to create model: {e}")
+    #     print(f"Error in create_model: {e}")
+
+def create_and_save_model(h_params, model_path):
+    """
+    Validates parameters, creates an SNN model, and saves it to a file.
+
+    Args:
+        h_params (dict): Hyperparameters required to build the model.
+        model_path (str): Full path (including file name) to save the model.
+
+    Raises:
+        KeyError: If any required parameter is missing from h_params.
+        Exception: If model creation or saving fails.
+    """
+    if h_params is None: print("h_params is None") 
+    elif not h_params:print("h_params is empty")
+    else: print("h_params content:", h_params)
+    
+    # Required keys validation
     required_keys = [
         "number_of_inputs", "number_of_hidden_neurons", "number_of_outputs",
         "beta_lif", "threshold_lif", "device", "learning_rate"
     ]
 
-    for key in required_keys:
-        if key not in h_params:
-            raise KeyError(f"Missing required parameter: '{key}'")
+    missing_keys = [key for key in required_keys if key not in h_params]
+    if missing_keys:
+        raise KeyError(f"Missing required parameters: {', '.join(missing_keys)}")
 
-    # If all keys are present, proceed to construct `translated_params`
+    # Construct translated parameters
     translated_params = {
         "num_inputs": int(h_params["number_of_inputs"]),
         "num_hidden": int(h_params["number_of_hidden_neurons"]),
@@ -108,108 +159,22 @@ def create_model(h_params , model_id_value):
         "device": h_params["device"],
         "learning_rate": float(h_params["learning_rate"]),
     }
-    
-    
+
+    # Create the model and save
     try:
-        # translated_params = {
-        #     "num_inputs": int(h_params.get("number_of_inputs", 16)),
-        #     "num_hidden": int(h_params.get("number_of_hidden_neurons", 256)),
-        #     "num_outputs": int(h_params.get("number_of_outputs", 35)),
-        #     "betaLIF": float(h_params.get("beta_lif", 0.9)),
-        #     "tresholdLIF": float(h_params.get("threshold_lif", 0.5)),
-        #     "device": h_params.get("device", "cuda"),
-        #     "learning_rate": float(h_params.get("learning_rate", 0.0002)),
-        # }
-        # Create model instance
-        # num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, learning_rate
-        print(h_params.get("device", "cuda"))
+        from core.Model import SNNModel  # Import dynamically if required
         model = SNNModel(**translated_params)
-        
-        print(h_params.get("device", "cuda"))
-        
-        # Save model
-        model_path = os.path.join(save_dir, f"snn_model_{model_id_value}.pth")
-        torch.save({"model_state": model.net.state_dict(), "hyperparameters": params}, model_path)
+
+        # Save model to specified path
+        torch.save({"model_state": model.net.state_dict(), "hyperparameters": h_params}, model_path)
+
         messagebox.showinfo("Success", f"Model saved to {model_path}")
         print(f"Model saved to {model_path}")
-                       
+
     except Exception as e:
         messagebox.showerror("Error", f"Failed to create model: {e}")
-        print(f"Error in create_model: {e}")
+        print(f"Error in create_and_save_model: {e}")
 
-
-
-    # try:
-    #     # Translate params for SNNModel
-    #     translated_params = {
-    #         "num_inputs": int(params.get("number_of_inputs", 16)),
-    #         "num_hidden": int(params.get("number_of_hidden_neurons", 256)),
-    #         "num_outputs": int(params.get("number_of_outputs", 35)),
-    #         "betaLIF": float(params.get("beta_lif", 0.9)),
-    #         "tresholdLIF": float(params.get("threshold_lif", 0.5)),
-    #         "device": params.get("device", "cuda"),
-    #         "learning_rate": float(params.get("learning_rate", 0.0002)),
-    #     }
-
-    #     # Create model instance
-    #     from core.Model import SNNModel  # Import SNNModel dynamically
-    #     model = SNNModel(**translated_params)
-
-    #     # Save model
-    #     model_path = os.path.join(save_dir, f"snn_model_{model_id}.pth")
-    #     torch.save({"model_state": model.net.state_dict(), "hyperparameters": params}, model_path)
-    #     messagebox.showinfo("Success", f"Model saved to {model_path}")
-    #     print(f"Model saved to {model_path}")
-
-    # except Exception as e:
-    #     messagebox.showerror("Error", f"Failed to create model: {e}")
-    #     print(f"Error in create_model: {e}")
-
-def load_model():
-    """
-    Load parameters and model state from a .pth file.
-    """
-    global model, params
-    file_path = filedialog.askopenfilename(
-        initialdir=DEFAULT_DIR,
-        title="Select a Model File",
-        filetypes=(("PyTorch Model Files", "*.pth"), ("All Files", "*.*"))
-    )
-
-    if not file_path:
-        return
-
-    try:
-        checkpoint = torch.load(file_path)
-
-        if "hyperparameters" not in checkpoint:
-            raise ValueError("The selected .pth file does not contain hyperparameters.")
-
-        params = checkpoint["hyperparameters"]
-
-        try:
-            translated_params = {
-                "num_inputs": int(params["number_of_inputs"]),
-                "num_hidden": int(params["number_of_hidden_neurons"]),
-                "num_outputs": int(params["number_of_outputs"]),
-                "betaLIF": float(params["beta_lif"]),
-                "tresholdLIF": float(params["threshold_lif"]),
-                "device": params["device"],
-                "learning_rate": float(params["learning_rate"]),
-            }
-        except KeyError as e:
-            raise ValueError(f"Missing critical hyperparameter: {e}")
-
-
-        from core.Model import SNNModel
-        model = SNNModel(**translated_params)
-        model.net.load_state_dict(checkpoint["model_state"])
-        messagebox.showinfo("Success", f"Model loaded from {file_path}")
-        print(f"Model loaded from {file_path}")
-
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to load model: {e}")
-        print(f"Error in load_model: {e}")
 
 class WidgetManager:
     def __init__(self, parent, hyperparameters):
@@ -287,7 +252,37 @@ class WidgetManager:
                     widget.entry.config(state="normal")
 
         filter_widget.var.trace_add("write", lambda *args: update_field_states())  # Modern trace method
-        update_field_states()  # Initialize field states    
+        update_field_states()  # Initialize field states  
+
+    def load_from_json(self, file_path):
+        """
+        Load and set widget values from a JSON file.
+
+        Parameters:
+            file_path (str): Path to the JSON file.
+        """
+        try:
+            # Read JSON file
+            with open(file_path, "r") as file:
+                data = json.load(file)
+
+            # Map JSON keys to widget values
+            for label, widget in self.widgets:
+                standardized_key = self.standardize_key(label)
+                if standardized_key in data:
+                    widget.set(data[standardized_key])  # Set value from JSON
+                else:
+                    print(f"Warning: Key '{standardized_key}' not found in JSON file.")
+            global last_file_path
+            last_file_path = file_path
+            messagebox.showinfo("Success", f"Parameters loaded from {file_path}")
+
+        except FileNotFoundError:
+            messagebox.showerror("Error", f"File not found: {file_path}")
+        except json.JSONDecodeError:
+            messagebox.showerror("Error", "Failed to decode JSON file.")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")          
 
 class EntryWidget:
     def __init__(self, parent, variable, label_text="Enter:", default_value=10, choices=None, *args):
@@ -321,35 +316,7 @@ class EntryWidget:
             elif isinstance(self.var, (tk.IntVar, tk.DoubleVar)):
                 self.var.set(value)
             else:
-                raise TypeError("Unsupported variable type. Use StringVar, IntVar, or DoubleVar.")       
-
-
-def open_file_and_load_data(hyperparameter_widgets):
-    """
-    Load hyperparameter values from a JSON file into the entry widgets.
-    """
-    global last_file_path
-    file_path = filedialog.askopenfilename(
-        initialdir=DEFAULT_DIR,
-        title="Select a JSON File",
-        filetypes=(("JSON Files", "*.json"), ("All Files", "*.*"))
-    )
-    if not file_path:
-        return
-
-    last_file_path = file_path
-    try:
-        with open(file_path, "r") as file:
-            data = json.load(file)
-
-        for label, widget in hyperparameter_widgets:
-            key = label.lower().replace(" ", "_")
-            if key in data:
-                widget.set(data[key])
-
-        messagebox.showinfo("Success", "Data loaded successfully!")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to read file: {str(e)}")
+                raise TypeError("Unsupported variable type. Use StringVar, IntVar, or DoubleVar.")
 
 def save_parameters_to_json(file_path, hyperparameters):
     try:
@@ -416,22 +383,15 @@ def save_to_last_file(hyperparameters, model_id_var=None):
     save_parameters_to_json(last_file_path, hyperparameters)
 
 
-def create_hyperparams(hyperparameter_widgets):
-    """
-    Create a SimpleNamespace object containing hyperparameters.
-    """
-    hyperparams = {re.sub(r"\W|^(?=\d)", "_", label).lower(): widget.get() for label, widget in hyperparameter_widgets}
-    return SimpleNamespace(**hyperparams)
-
-
-def refresh_hyperparams(hyperparameter_widgets):
+def refresh_hyperparams(hyperparams):
     """
     Refresh hyperparameters and notify an external app.
     """
-    hyperparams = create_hyperparams(hyperparameter_widgets)
 
+    # with open("hyperparams.pkl", "wb") as file:
     with open("hyperparams.pkl", "wb") as file:
-        pickle.dump(vars(hyperparams), file)
+        # pickle.dump(vars(hyperparams), file)
+        pickle.dump(hyperparams, file)
 
     with open("notification.txt", "w") as file:
         file.write("Data Updated")
@@ -455,25 +415,39 @@ if __name__ == "__main__":
     # if batch_size_widget:
     #     print(f"Batch Size: {batch_size_widget.get()}")
 
-    ttk.Button(root, text="Save to File", command=lambda: save_parameters_to_file(manager.get_hyperparameters(), manager.get_value_by_label("Model ID") )).grid(
+    ttk.Button(root, text="Save As (.json)", command=lambda: save_parameters_to_file(manager.get_hyperparameters(), manager.get_value_by_label("Model ID") )).grid(
         row=2, column=0, padx=10, pady=5
     )
-    ttk.Button(root, text="Load from File", command=lambda: open_file_and_load_data(hyperparameter_widgets)).grid(
+    
+    ttk.Button(root, text="Save (.json)", command=lambda: save_to_last_file(manager.get_hyperparameters()) ).grid(
         row=3, column=0, padx=10, pady=5
     )
-    ttk.Button(root, text="Save to Last File", command=lambda: save_to_last_file(manager.get_hyperparameters()) ).grid(
-        row=4, column=0, padx=10, pady=5
+    
+    ttk.Button(
+            root,
+            text="Populate (from JSON)",
+            command=lambda: manager.load_from_json(filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")]))
+        ).grid(row=4, column=0, padx=10, pady=5) 
+    
+    
+    ttk.Button(root, text="Create new (.pth) for training", command=lambda: create_model(manager.get_hyperparameters(), manager.get_value_by_label("Model ID") )).grid(
+        row=5, column=0, padx=10, pady=5
     )
-    ttk.Button(root, text="Run Second App", command=run_second_app).grid(
-        row=5, column=0, padx=10, pady=5)
-    ttk.Button(root, text="Refresh Hyperparameters", command=lambda: refresh_hyperparams(hyperparameter_widgets)).grid(
+    
+    ttk.Button(root, text="Save (.pth)", command=lambda: save_model(manager.get_hyperparameters(), pth_saved_dir)).grid(
         row=6, column=0, padx=10, pady=5
-    )    
-    ttk.Button(root, text="Create Model", command=lambda: create_model(manager.get_hyperparameters(), manager.get_value_by_label("Model ID") )).grid(
-        row=7, column=0, padx=10, pady=5
+    )   
+    
+    ttk.Button(root, text="Load from File", command=lambda: open_file_and_load_data(hyperparameter_widgets)).grid(
+        row=6, column=0, padx=10, pady=5
     )
-    ttk.Button(root, text="Load Model", command=load_model).grid(
+
+    ttk.Button(root, text="Run Second App", command=run_second_app).grid(
+        row=7, column=0, padx=10, pady=5)
+    ttk.Button(root, text="Refresh Hyperparameters", command=lambda: refresh_hyperparams(manager.get_hyperparameters())).grid(
         row=8, column=0, padx=10, pady=5
-    )         
+    )
+
+    
 
     root.mainloop()

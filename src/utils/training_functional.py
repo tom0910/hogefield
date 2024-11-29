@@ -128,6 +128,7 @@ def prepare_dataset(pth_file_path, params):
     # Prepare datasets
     train_set, test_set, target_labels = FL.prepare_datasets(
         data_path="/project/data/GSC/",
+        get_labels=False,
         check_labels=False
     )
     
@@ -200,12 +201,12 @@ def save_checkpoint(checkpoint, checkpoint_dir, filename):
     except Exception as e:
         # Handle any errors in saving the checkpoint
         print(f"Error saving checkpoint: {e}")
-    
+
 
 def load_latest_checkpoint(checkpoint_dir, model, optimizer):
     checkpoint_files = sorted(glob.glob(os.path.join(checkpoint_dir, 'checkpoint_*.pth')), key=os.path.getmtime)
     if not checkpoint_files:
-        return None, 0, [], []
+        return None, 0, [], [], 0  # Ensure 5 values are returned 
 
     latest_checkpoint = checkpoint_files[-1]
     # print(f"Loading checkpoint: {latest_checkpoint}")
@@ -214,6 +215,35 @@ def load_latest_checkpoint(checkpoint_dir, model, optimizer):
     model.net.load_state_dict(checkpoint["model_state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     return checkpoint, checkpoint["epoch"], checkpoint["loss_hist"], checkpoint["acc_hist"], int(counter)
+
+def parse_counter(filename):
+    """
+    Parse the counter from the checkpoint filename.
+    
+    Args:
+        filename (str): The checkpoint filename to parse.
+        
+    Returns:
+        int: Extracted counter value, or 0 if not valid.
+    """
+    filename_parts = filename.split('/')[-1].split('.')[0].split('_')
+    if len(filename_parts) > 1 and filename_parts[-1].isdigit():
+        return int(filename_parts[-1])
+    return 0
+    
+# def load_checkpoint(pth_file_path, model, optimizer):
+def load_checkpoint(pth_file_path, model, optimizer):    
+    if not pth_file_path:
+         return None, 0, [], [], 0  # Ensure 5 values are returned 
+    print(f"pth_file_path: {pth_file_path}")
+    checkpoint = torch.load(pth_file_path)
+    if "model_state_dict" in checkpoint:
+        model.net.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        counter = parse_counter(pth_file_path)
+        return checkpoint, checkpoint["epoch"], checkpoint["loss_hist"], checkpoint["acc_hist"], int(counter)
+    else:
+        return None, 0, [], [], 0
 
 # def plot_training(fig, ax1, ax2, loss_hist, acc_hist, plots_dir, filename):
 #     ax1.clear()

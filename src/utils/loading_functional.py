@@ -154,7 +154,7 @@ def custom_collate_fn(batch, params, target_labels, pth_file_path):
     Custom collate function for DataLoader to process audio batches.
     """
     # Ensure parameters are loaded
-    params = load_parameters_from_pth(pth_file_path)
+    # params = load_parameters_from_pth(pth_file_path)  # source of not tried errors can be. I commented out because of duplicates params from passing from func variable
     try:
         n_fft = int(params["n_fft"])
         hop_length = int(params["hop_length"])
