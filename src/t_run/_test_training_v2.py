@@ -4,7 +4,10 @@ import tkinter as tk
 from utils.training_functional import prepare_dataset, create_optimizer, load_latest_checkpoint, load_checkpoint
 import utils.loading_functional as FL
 from core.Model import SNNModel
+from core.CheckPoinManager import CheckpointManager
 from utils.training_utils import train, train_as_hypp_change
+from snntorch import functional as SNNF 
+import torch
 
 initial_dir = "/project/hyperparam"
 
@@ -75,52 +78,32 @@ def select_or_create_directory(initial_dir="/project/hyperparam"):
 #     print(f"Selected or created directory: {dir_path}")
 
 # file_path="/project/hyperparam/hogefieldNum1_20241127_085000/pth/checkpoint_iter_5840.pth"
-file_path="/project/hyperparam/tomTest_20241129_162153/snn_model_tomTest.pth"
+# file_path="/project/hyperparam/tomTest_20241129_162153/snn_model_tomTest.pth"
+# file_path="/project/hyperparam/trial/pth/epoch_1.pth"
 # # dir_path="/project/hyperparamTestTrainingv2"
-dir_path="/project/hyperparam/trial"
+# dir_path="/project/hyperparam/trial"
+# dir_path="/project/hyperparam/trial/trial_hyp_change"
+dir_path="/project/hyperparam/sat_less_timestep"
 
 log_file="output.log"
 log_path = os.path.join(dir_path, log_file)
 plots_dir = os.path.join(dir_path,"plots")
 pth_dir = os.path.join(dir_path,"pth")
-# model_path = os.path.join(file_path,"snn_model_default.pth")
 
-# Prepare dataset
-params = FL.load_parameters_from_pth(file_path)  # Updated function ensures normalized keys
-# check params for debug
-print(params)
+
+# file_path = "hyperparam/trial/snn_model_hogefield.pth"
+file_path = "/project/hyperparam/sat_less_timestep/snn_model_hogefield.pth"
+# you need params in everything
+chp_manager = CheckpointManager.load_checkpoint_with_defaults(file_path=file_path)
+# chp_manager.print_contents()
+params = chp_manager.get_hyperparameters()
+
+
 #prprocess dataset by batch size
 train_loader, test_loader = prepare_dataset(pth_file_path=file_path, params=params) # pth_file_path is decrepted in prpeare dataset func
 
-# Align keys with SNNModel requirements
-paramsSNN = {
-    "num_inputs":       params.get("number_of_inputs"),
-    "num_hidden":       params.get("number_of_hidden_neurons"),
-    "num_outputs":      params.get("number_of_outputs"),
-    "beta_lif":         params.get("beta_lif"),  # Default if missing
-    "threshold_lif":    params.get("threshold_lif"),  # Default if missing
-    "device":           params.get("device"),
-    "learning_rate":    params.get("learning_rate"),
-}
+loss_fn = SNNF.mse_count_loss(correct_rate=0.75, incorrect_rate=0.25,population_code=False)
 
-# Initialize model
-model = SNNModel(
-    num_inputs      = paramsSNN["num_inputs"],
-    num_hidden      = paramsSNN["num_hidden"],
-    num_outputs     = paramsSNN["num_outputs"],
-    betaLIF         = paramsSNN["beta_lif"],
-    tresholdLIF     = paramsSNN["threshold_lif"],  # Fixed typo from "treshold"
-    device          = paramsSNN["device"],
-    learning_rate   = paramsSNN["learning_rate"],
-)
-
-
-# Create optimizer and loss function
-optimizer, loss_fn = create_optimizer(
-    net_params=model.net.parameters(),
-    learning_rate=params.get("learning_rate"),
-    num_classes=params.get("num_outputs"),
-)
 
 #load model and states, if count is not equal to zero 
 # checkpoint, epoch_at, loss_hist, acc_hist, counter = load_checkpoint(pth_file_path=file_path, model=model, optimizer=optimizer)
@@ -128,12 +111,9 @@ optimizer, loss_fn = create_optimizer(
 
 # Train the model
 train_as_hypp_change(
-    file_path,
-    model=model,
-    optimizer=optimizer,
+    checkpoint_mngr=chp_manager,
     train_loader=train_loader,
     test_loader=test_loader,
-    params=params,
     loss_fn=loss_fn,
     num_epochs=100,
     checkpoint_dir=pth_dir,

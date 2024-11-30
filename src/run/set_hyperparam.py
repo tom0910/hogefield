@@ -11,7 +11,8 @@ from types import SimpleNamespace
 import re
 import torch
 import shutil
-from core.Model import SNNModel  # Import SNNModel dynamically
+from core.Model import SNNModel  # Import SNNModel dynamicallyű
+from core.CheckPoinManager import CheckpointManager  # Adjust the import path as needed
 
 DEFAULT_DIR = "/project/hyperparam"
 if not os.path.exists(DEFAULT_DIR):
@@ -92,40 +93,10 @@ def create_model(h_params , model_id_value):
     
     create_and_save_model(h_params=h_params,model_path=model_path)
     
-    # required_keys = [
-    #     "number_of_inputs", "number_of_hidden_neurons", "number_of_outputs",
-    #     "beta_lif", "threshold_lif", "device", "learning_rate"
-    # ]
-
-    # for key in required_keys:
-    #     if key not in h_params:
-    #         raise KeyError(f"Missing required parameter: '{key}'")
-
-    # # If all keys are present, proceed to construct `translated_params`
-    # translated_params = {
-    #     "num_inputs": int(h_params["number_of_inputs"]),
-    #     "num_hidden": int(h_params["number_of_hidden_neurons"]),
-    #     "num_outputs": int(h_params["number_of_outputs"]),
-    #     "betaLIF": float(h_params["beta_lif"]),
-    #     "tresholdLIF": float(h_params["threshold_lif"]),
-    #     "device": h_params["device"],
-    #     "learning_rate": float(h_params["learning_rate"]),
-    # }
-    
-    
-    # try:
-    #     model = SNNModel(**translated_params)
-    #     torch.save({"model_state": model.net.state_dict(), "hyperparameters": params}, model_path)
-    #     messagebox.showinfo("Success", f"Model saved to {model_path}")
-    #     print(f"Model saved to {model_path}")
-                       
-    # except Exception as e:
-    #     messagebox.showerror("Error", f"Failed to create model: {e}")
-    #     print(f"Error in create_model: {e}")
 
 def create_and_save_model(h_params, model_path):
     """
-    Validates parameters, creates an SNN model, and saves it to a file.
+    Validates parameters, creates an SNN model, initializes the CheckpointManager, and saves to a file.
 
     Args:
         h_params (dict): Hyperparameters required to build the model.
@@ -135,14 +106,13 @@ def create_and_save_model(h_params, model_path):
         KeyError: If any required parameter is missing from h_params.
         Exception: If model creation or saving fails.
     """
-    if h_params is None: print("h_params is None") 
-    elif not h_params:print("h_params is empty")
-    else: print("h_params content:", h_params)
-    
+    if not h_params:
+        raise ValueError("h_params is None or empty.")
+
     # Required keys validation
     required_keys = [
         "number_of_inputs", "number_of_hidden_neurons", "number_of_outputs",
-        "beta_lif", "threshold_lif", "device", "learning_rate"
+        "beta_lif", "threshold_lif", "device"
     ]
 
     missing_keys = [key for key in required_keys if key not in h_params]
@@ -157,16 +127,20 @@ def create_and_save_model(h_params, model_path):
         "betaLIF": float(h_params["beta_lif"]),
         "tresholdLIF": float(h_params["threshold_lif"]),
         "device": h_params["device"],
-        "learning_rate": float(h_params["learning_rate"]),
     }
 
-    # Create the model and save
     try:
-        from core.Model import SNNModel  # Import dynamically if required
+        # Create the model
         model = SNNModel(**translated_params)
 
-        # Save model to specified path
-        torch.save({"model_state": model.net.state_dict(), "hyperparameters": h_params}, model_path)
+        # Create optimizer
+        optimizer = torch.optim.Adam(model.net.parameters(), lr=h_params.get("learning_rate", None))
+
+        # Initialize the CheckpointManager
+        manager = CheckpointManager(model=model, optimizer=optimizer, hyperparameters=h_params)
+
+        # Save using CheckpointManager
+        manager.save(model_path)
 
         messagebox.showinfo("Success", f"Model saved to {model_path}")
         print(f"Model saved to {model_path}")

@@ -6,7 +6,8 @@ import snntorch as snn
 
 # Define Model Parameters (GLOBAL values should be passed here)
 class SNNModel:
-    def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, learning_rate):
+    def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device):
+                #  , learning_rate):
         """
         Initializes the Spiking Neural Network (SNN) with the given parameters.
 
@@ -24,7 +25,7 @@ class SNNModel:
         self.betaLIF = betaLIF
         self.tresholdLIF = tresholdLIF
         self.device = device
-        self.learning_rate = learning_rate
+        # self.learning_rate = learning_rate
 
         # Surrogate gradient for spiking neuron
         spike_grad = surrogate.fast_sigmoid()
