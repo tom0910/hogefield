@@ -1,8 +1,8 @@
 import torch
+from core.Model import SNNModel, SNNModel_population
 
 
 class CheckpointManager:
-
     def __init__(self, model=None, optimizer=None, hyperparameters=None):
         """
         Initialize the CheckpointManager with model, optimizer, hyperparameters, and additional data.
@@ -28,6 +28,7 @@ class CheckpointManager:
         Save the checkpoint to a file.
         """
         checkpoint = {
+            "model_type": type(self.model).__name__,  # Save model type fro v1.1 handling new models
             "model_state_dict": self.model.net.state_dict() if self.model else None,
             "optimizer_state_dict": self.optimizer.state_dict() if self.optimizer else None,
             "optimizer_type": self.optimizer_type,
@@ -111,6 +112,61 @@ class CheckpointManager:
         manager.epoch = epoch
         return manager
 
+    MODEL_REGISTRY = {
+        "SNNModel": SNNModel,
+        "SNNModel_population": SNNModel_population,
+        
+    }
+    
+    @staticmethod
+    def load_checkpoint_with_defaults_v1_1(file_path):
+        checkpoint = torch.load(file_path)
+
+        # Extract model type and hyperparameters
+        model_type = checkpoint.get("model_type", "SNNModel")  # Default to SNNModel
+        hyperparameters = checkpoint.get("hyperparameters", {})
+
+        # Dynamically instantiate the model
+        if model_type in CheckpointManager.MODEL_REGISTRY:
+            model_class = CheckpointManager.MODEL_REGISTRY[model_type]
+            model = model_class(
+                num_inputs=hyperparameters.get("number_of_inputs"),
+                num_hidden=hyperparameters.get("number_of_hidden_neurons"),
+                num_outputs=hyperparameters.get("number_of_outputs"),
+                betaLIF=hyperparameters.get("beta_lif"),
+                tresholdLIF=hyperparameters.get("threshold_lif"),
+                device=hyperparameters.get("device"),
+            )
+            model.net.load_state_dict(checkpoint["model_state_dict"])
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
+
+        # Initialize optimizer
+        optimizer = None
+        optimizer_type = checkpoint.get("optimizer_type")
+        optimizer_params = checkpoint.get("optimizer_params", {})
+        if "optimizer_state_dict" in checkpoint and model:
+            optimizer_map = {
+                "Adam": torch.optim.Adam,
+                "SGD": torch.optim.SGD,
+                "RMSprop": torch.optim.RMSprop,
+            }
+            optimizer_class = optimizer_map.get(optimizer_type, torch.optim.Adam)
+            optimizer = optimizer_class(model.net.parameters(), **optimizer_params)
+            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+        # Extract additional data
+        manager = CheckpointManager(
+            model=model,
+            optimizer=optimizer,
+            hyperparameters=hyperparameters,
+        )
+        manager.loss_hist = checkpoint.get("loss_hist", [])
+        manager.acc_hist = checkpoint.get("acc_hist", [])
+        manager.test_acc_hist = checkpoint.get("test_acc_hist", [])
+        manager.counter = checkpoint.get("counter", 0)
+        manager.epoch = checkpoint.get("epoch", 0)
+        return manager
 
 
     @staticmethod
@@ -239,7 +295,7 @@ class CheckpointManager:
         if len(filename_parts) > 1 and filename_parts[-1].isdigit():
             return int(filename_parts[-1])
         return 0
-    
+
     def print_contents(self):
         """
         Print the current state and contents of the CheckpointManager instance to the terminal.
@@ -252,130 +308,30 @@ class CheckpointManager:
         print("Hyperparameters:")
         for key, value in self.hyperparameters.items():
             print(f"  {key}: {value}")
-        print("Loss History:", self.loss_hist)
-        print("Accuracy History:", self.acc_hist)
-        print("Test Accuracy History:", self.test_acc_hist)
+        print("Loss History (Last 5):", self.loss_hist[-5:] if self.loss_hist else "No Data")
+        print("Accuracy History (Last 5):", self.acc_hist[-5:] if self.acc_hist else "No Data")
+        print("Test Accuracy History (Last 5):", self.test_acc_hist[-5:] if self.test_acc_hist else "No Data")
         print("Counter:", self.counter)
-        print("Counter:", self.epoch)
+        print("Epoch:", self.epoch)
         print("===================================")
 
-
-
-
-
-# class CheckpointManager:
     
-#     def __init__(self, model=None, optimizer=None, hyperparameters=None):
-#         """
-#         Initialize the CheckpointManager with model, optimizer, hyperparameters, and additional data.
-
-#         Args:
-#             model (torch.nn.Module): Model instance.
-#             optimizer (torch.optim.Optimizer): Optimizer instance.
-#             hyperparameters (dict): Model hyperparameters.
-#             additional_data (dict): Additional data like loss history, epoch, etc.
-#         """
-#         self.model = model
-#         self.optimizer = optimizer
-#         self.hyperparameters = hyperparameters or {}
-#         self.loss_hist = []
-#         self.acc_hist = []
-#         self.test_acc_hist = []
-#         self.counter = 0
-#         self.optimizer_type = type(optimizer).__name__ if optimizer else None
-#         self.optimizer_params = {"lr": optimizer.param_groups[0]["lr"]} if optimizer else {}
-
-#     def save(self, file_path):
-#         """
-#         Save the checkpoint to a file.
-#         """
-#         checkpoint = {
-#             "model_state_dict": self.model.net.state_dict() if self.model else None,
-#             "optimizer_state_dict": self.optimizer.state_dict() if self.optimizer else None,
-#             "optimizer_type": self.optimizer_type,
-#             "optimizer_params": self.optimizer_params,
-#             "hyperparameters": self.hyperparameters,
-#             "loss_hist": self.loss_hist,
-#             "acc_hist": self.acc_hist,
-#             "test_acc_hist": self.test_acc_hist,
-#             "counter": self.counter,
-#         }
-#         torch.save(checkpoint, file_path)
-
-
-#     @staticmethod
-#     def load_checkpoint(file_path, model=None, optimizer=None):
-#         """
-#         Load a checkpoint from a file.
-
-#         Args:
-#             file_path (str): Path to the checkpoint file.
-#             model (torch.nn.Module): Optional model instance to load the weights into.
-#             optimizer (torch.optim.Optimizer): Optional optimizer instance to load the state into.
-
-#         Returns:
-#             CheckpointManager: A new or updated instance of CheckpointManager.
-#         """
-#         checkpoint = torch.load(file_path)
-
-#         # Load model state if available
-#         if "model_state_dict" in checkpoint and model:
-#             model.net.load_state_dict(checkpoint["model_state_dict"])
-
-#         # Load optimizer state if available
-#         if "optimizer_state_dict" in checkpoint and optimizer:
-#             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-
-#         # Extract stored data
-#         hyperparameters = checkpoint.get("hyperparameters", {})
-#         loss_hist = checkpoint.get("loss_hist", [])
-#         acc_hist = checkpoint.get("acc_hist", [])
-#         test_acc_hist = checkpoint.get("test_acc_hist", [])
-#         counter = checkpoint.get("counter", 0)
-
-#         # Handle optimizer type and params
-#         optimizer_type = checkpoint.get("optimizer_type")
-#         optimizer_params = checkpoint.get("optimizer_params", {})
-
-#         # Dynamically create optimizer if none exists
-#         if optimizer_type and model:
-#             optimizer_map = {
-#                 "Adam": torch.optim.Adam,
-#                 "SGD": torch.optim.SGD,
-#                 "RMSprop": torch.optim.RMSprop,
-#             }
-#             optimizer_class = optimizer_map.get(optimizer_type, torch.optim.Adam)
-#             optimizer = optimizer_class(model.net.parameters(), **optimizer_params)
-
-#         # Create and return a new CheckpointManager instance
-#         manager = CheckpointManager(
-#             model=model,
-#             optimizer=optimizer,
-#             hyperparameters=hyperparameters,
-#         )
-#         manager.loss_hist = loss_hist
-#         manager.acc_hist = acc_hist
-#         manager.test_acc_hist = test_acc_hist
-#         manager.counter = counter
-
-#         return manager
-      
-
-#     def get_hyperparameters(self):
-#         """
-#         Retrieve the stored hyperparameters.
-
-#         Returns:
-#             dict: The hyperparameters dictionary.
-#         """
-#         return self.hyperparameters
-
-#     def set_hyperparameters(self, hyperparameters):
-#         """
-#         Update the hyperparameters.
-
-#         Args:
-#             hyperparameters (dict): The new hyperparameters.
-#         """
-#         self.hyperparameters.update(hyperparameters)
+    # def print_contents(self):
+    #     """
+    #     Print the current state and contents of the CheckpointManager instance to the terminal.
+    #     """
+    #     print("=== CheckpointManager Contents ===")
+    #     print("Model:", "Present" if self.model else "None")
+    #     print("Optimizer:", "Present" if self.optimizer else "None")
+    #     print("Optimizer Type:", self.optimizer_type)
+    #     print("Optimizer Parameters:", self.optimizer_params)
+    #     print("Hyperparameters:")
+    #     for key, value in self.hyperparameters.items():
+    #         print(f"  {key}: {value}")
+    #     print("Loss History:", self.loss_hist)
+    #     print("Accuracy History:", self.acc_hist)
+    #     print("Test Accuracy History:", self.test_acc_hist)
+    #     print("Counter:", self.counter)
+    #     print("Epoch:", self.epoch)
+    #     print("===================================")
 

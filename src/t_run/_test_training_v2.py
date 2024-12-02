@@ -92,7 +92,7 @@ pth_dir = os.path.join(dir_path,"pth")
 
 
 # file_path = "hyperparam/trial/snn_model_hogefield.pth"
-file_path = "/project/hyperparam/sat_less_timestep/snn_model_hogefield.pth"
+file_path = "/project/hyperparam/sat_less_timestep/pth/checkpoint_iter_70.pth"
 # you need params in everything
 chp_manager = CheckpointManager.load_checkpoint_with_defaults(file_path=file_path)
 # chp_manager.print_contents()

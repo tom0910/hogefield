@@ -7,7 +7,8 @@ from core.CheckPoinManager import CheckpointManager
 import os
 import glob
 
-def train_as_hypp_change(
+
+def train_population(
     checkpoint_mngr: CheckpointManager,
     train_loader,
     test_loader,
@@ -23,11 +24,15 @@ def train_as_hypp_change(
     print(f"checkpoint_dir:{checkpoint_dir}")
     checkpoint_mngr.print_contents()
 
+    #needs manager update during training
     start_epoch = checkpoint_mngr.epoch
+    counter = checkpoint_mngr.counter
+    
+    # needs manager update during training
     loss_hist = checkpoint_mngr.loss_hist
     acc_hist = checkpoint_mngr.acc_hist
     test_acc_hist =checkpoint_mngr.test_acc_hist
-    counter = checkpoint_mngr.counter
+        
     net = checkpoint_mngr.model.net
     model = checkpoint_mngr.model
     optimizer = checkpoint_mngr.optimizer
@@ -38,8 +43,10 @@ def train_as_hypp_change(
     # Load the latest checkpoint
     #checkpoint, start_epoch, loss_hist, acc_hist, counter = FT.load_latest_checkpoint(checkpoint_dir, model, optimizer)
     timestep    = params["timestep_calculated"]
-    device      = params["device"]    
-
+    # device      = params["device"]    
+    device = validate_device(params["device"])
+    print(f"Using device: {device}")
+    
     # Setup for training
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
     ax1.set_title("Training Loss")
@@ -64,28 +71,20 @@ def train_as_hypp_change(
             loss_hist.append(loss_val.item())
             acc = SNNF.accuracy_rate(spk_rec, targets)
             acc_hist.append(acc)
+            #update manager
+            checkpoint_mngr.loss_hist = loss_hist
+            checkpoint_mngr.acc_hist = acc_hist
 
             if counter % 100 == 0:  # Update plot png every 100 iterations
                 FT.plot_training(fig, ax1, ax2, loss_hist, acc_hist, plots_dir, f"epoch_{epoch}_iter_{counter}.png")
 
-            if counter % 100 == 0:  # Save checkpoint every 500 iterations
+            if counter % 10 == 0:  # Save checkpoint every 500 iterations
+                #update manager                
+                checkpoint_mngr.epoch = epoch  # Update epoch
+                checkpoint_mngr.counter = counter  # Update counter
+                # write to pth                                
                 pth_file_path = file_path_to_save(checkpoint_dir=checkpoint_dir, filename=f"checkpoint_iter_{counter}.pth")
                 checkpoint_mngr.save(pth_file_path)
-                # checkpoint = {
-                #     "epoch": epoch,
-                #     "model_state_dict": model.net.state_dict(),
-                #     "optimizer_state_dict": optimizer.state_dict(),
-                #     "loss_hist": loss_hist,
-                #     "acc_hist": acc_hist,
-                #     "test_acc_hist": test_acc_hist,
-                #     "counter": counter,
-                #     # in case you change hyperparams during training, save it with some exceptions
-                #     # "hyperparameters": {key: value for key, value in params.items() if key not in ["num_inputs", "num_hidden", "num_outputs", "beta_lif", "threshold_lif"]}
-                #     # we save those else those gets None unless iniitialized from the beginning
-                #     "hyperparameters": {key: value for key, value in params.items()}
-                    
-                # }
-                # FT.save_checkpoint(checkpoint, checkpoint_dir, f"checkpoint_iter_{counter}.pth")
 
             if counter % len(train_loader) == 0:
                 with torch.no_grad():
@@ -93,25 +92,113 @@ def train_as_hypp_change(
                     test_acc = FT.batch_accuracy(loader=test_loader, net=model.net, timestep=timestep, device=device)
                     print(f"Iteration {counter}, Test Acc: {test_acc * 100:.2f}%\n")
                     test_acc_hist.append(test_acc.item())
+                    checkpoint_mngr.test_acc_hist = test_acc_hist
             
             counter += 1
 
         # Save after each epoch
+        #update manager                
+        checkpoint_mngr.epoch = epoch  # Update epoch
+        # write to pth    
         pth_file_path = file_path_to_save(checkpoint_dir=checkpoint_dir, filename=f"epoch_{epoch}.pth")
         checkpoint_mngr.save(pth_file_path)
-        # checkpoint = {
-        #     "epoch": epoch + 1,
-        #     "model_state_dict": model.net.state_dict(),
-        #     "optimizer_state_dict": optimizer.state_dict(),
-        #     "loss_hist": loss_hist,
-        #     "acc_hist": acc_hist,
-        #     "test_acc_hist": test_acc_hist,
-        #     "counter": counter,
-        #     # Add hyperparameters
-        #     "hyperparameters": {key: value for key, value in params.items() if key not in ["num_inputs", "num_hidden", "num_outputs", "beta_lif", "threshold_lif"]} 
-        # }
-        # # torch.save(checkpoint, f'p_checkpoints/checkpoint_epoch_{epoch}.pth')
-        # FT.save_checkpoint(checkpoint, checkpoint_dir, f"epoch_{epoch}.pth")
+
+    plt.close(fig)
+
+def train_as_hypp_change(
+    checkpoint_mngr: CheckpointManager,
+    train_loader,
+    test_loader,
+    loss_fn,
+    num_epochs,
+    checkpoint_dir,
+    plots_dir,
+):
+    # CHANGE
+    # start_epoch, loss_hist, acc_hist, test_acc_hist, counter = 0, [], [], [], 1
+    
+    print(f"plots_dir:{plots_dir}")
+    print(f"checkpoint_dir:{checkpoint_dir}")
+    checkpoint_mngr.print_contents()
+
+    #needs manager update during training
+    start_epoch = checkpoint_mngr.epoch
+    counter = checkpoint_mngr.counter
+    
+    # needs manager update during training
+    loss_hist = checkpoint_mngr.loss_hist
+    acc_hist = checkpoint_mngr.acc_hist
+    test_acc_hist =checkpoint_mngr.test_acc_hist
+        
+    net = checkpoint_mngr.model.net
+    model = checkpoint_mngr.model
+    optimizer = checkpoint_mngr.optimizer
+    
+    # CheckpointManager.get_hyperparameters
+    params = checkpoint_mngr.get_hyperparameters()
+
+    # Load the latest checkpoint
+    #checkpoint, start_epoch, loss_hist, acc_hist, counter = FT.load_latest_checkpoint(checkpoint_dir, model, optimizer)
+    timestep    = params["timestep_calculated"]
+    # device      = params["device"]    
+    device = validate_device(params["device"])
+    print(f"Using device: {device}")
+    
+    # Setup for training
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
+    ax1.set_title("Training Loss")
+    ax2.set_title("Training Accuracy")
+
+    for epoch in range(start_epoch, num_epochs):
+        for i, batch in enumerate(train_loader):
+            data, targets, *_ = batch
+            data = data.permute(3, 0, 2, 1).squeeze()
+            data, targets = data.to(device), targets.to(device)
+
+            # Training step
+            net.train()
+            spk_rec = model.forward(data, timestep)
+            loss_val = loss_fn(spk_rec, targets)
+
+            optimizer.zero_grad()
+            loss_val.backward()
+            optimizer.step()
+
+            # Log progress
+            loss_hist.append(loss_val.item())
+            acc = SNNF.accuracy_rate(spk_rec, targets)
+            acc_hist.append(acc)
+            #update manager
+            checkpoint_mngr.loss_hist = loss_hist
+            checkpoint_mngr.acc_hist = acc_hist
+
+            if counter % 100 == 0:  # Update plot png every 100 iterations
+                FT.plot_training(fig, ax1, ax2, loss_hist, acc_hist, plots_dir, f"epoch_{epoch}_iter_{counter}.png")
+
+            if counter % 10 == 0:  # Save checkpoint every 500 iterations
+                #update manager                
+                checkpoint_mngr.epoch = epoch  # Update epoch
+                checkpoint_mngr.counter = counter  # Update counter
+                # write to pth                                
+                pth_file_path = file_path_to_save(checkpoint_dir=checkpoint_dir, filename=f"checkpoint_iter_{counter}.pth")
+                checkpoint_mngr.save(pth_file_path)
+
+            if counter % len(train_loader) == 0:
+                with torch.no_grad():
+                    model.net.eval()
+                    test_acc = FT.batch_accuracy(loader=test_loader, net=model.net, timestep=timestep, device=device)
+                    print(f"Iteration {counter}, Test Acc: {test_acc * 100:.2f}%\n")
+                    test_acc_hist.append(test_acc.item())
+                    checkpoint_mngr.test_acc_hist = test_acc_hist
+            
+            counter += 1
+
+        # Save after each epoch
+        #update manager                
+        checkpoint_mngr.epoch = epoch  # Update epoch
+        # write to pth    
+        pth_file_path = file_path_to_save(checkpoint_dir=checkpoint_dir, filename=f"epoch_{epoch}.pth")
+        checkpoint_mngr.save(pth_file_path)
 
     plt.close(fig)
     
@@ -140,7 +227,16 @@ def file_path_to_save(checkpoint_dir, filename):
     
     return new_file_path    
 
+def validate_device(device_str):
+    if device_str == "cuda" and torch.cuda.is_available():
+        return torch.device("cuda")
+    elif device_str == "cuda":
+        print("CUDA is not available. Falling back to CPU.")
+        return torch.device("cpu")
+    else:
+        return torch.device("cpu")
 
+# for older code that is for _test_training.py
 def train(
     model,
     optimizer,

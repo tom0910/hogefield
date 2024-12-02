@@ -68,6 +68,45 @@ class SNNModel:
     
     # Optional: Visualization Utility (Specific to this model)
 
+class SNNModel_population:
+    def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device):
+                #  , learning_rate):
+        """
+        Initializes the Spiking Neural Network (SNN) with the given parameters.
+
+        Parameters:
+        - num_inputs: Number of input neurons.
+        - num_hidden: Number of neurons in the hidden layers.
+        - num_outputs: Number of output neurons.
+        - betaLIF: Decay factor for Leaky Integrate-and-Fire neurons.
+        - tresholdLIF: Firing threshold for LIF neurons.
+        - device: Device to run the model (e.g., 'cpu' or 'cuda').
+        - diff from default: population variable hardcoded
+        """
+        self.num_inputs = num_inputs
+        self.num_hidden = num_hidden
+        self.num_outputs = num_outputs
+        self.betaLIF = betaLIF
+        self.tresholdLIF = tresholdLIF
+        self.device = device
+        # self.learning_rate = learning_rate
+
+        population=10
+
+        # Surrogate gradient for spiking neuron
+        spike_grad = surrogate.fast_sigmoid()
+
+        # Define the SNN
+        self.net = nn.Sequential(
+            nn.Linear(self.num_inputs, self.num_hidden),
+            snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF),
+            nn.Linear(self.num_hidden, self.num_hidden),
+            snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF),
+            nn.Linear(self.num_hidden, self.num_outputs
+                      *population),
+            snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF, output=True)
+        ).to(self.device)
+
 
 import matplotlib.pyplot as plt
 import numpy as np

@@ -295,12 +295,12 @@ def plot_training(fig, ax1, ax2, loss_hist, acc_hist, plots_dir, filename):
     try:
         # Save the new plot
         fig.savefig(new_file_path)
-        print(f"Plot saved: {new_file_path}")
+        # print(f"Plot saved: {new_file_path}")
         
         # Safely delete the old file if a new one was successfully created
         if old_file_path and old_file_path != new_file_path:
             os.remove(old_file_path)
-            print(f"Removed old plot: {old_file_path}")
+            # print(f"Removed old plot: {old_file_path}")
     except Exception as e:
         # Handle any errors in saving the plot
         print(f"Error saving plot: {e}")
