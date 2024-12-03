@@ -6,6 +6,8 @@ import utils.training_functional as FT
 from core.CheckPoinManager import CheckpointManager
 import os
 import glob
+from core.Model import SNNModel
+
 
 
 def train_population(
@@ -144,6 +146,16 @@ def train_as_hypp_change(
     device = validate_device(params["device"])
     print(f"Using device: {device}")
     
+    # Define ranges for dynamic tuning
+    # threshold_range = [1.0, 1.2, 1.5]
+    # beta_range = [0.8, 0.85, 0.9]
+    # threshold_range = [0.1, 0.2, 0.5]  # Start with smaller values
+    # beta_range = [0.9, 0.95, 0.99]     # Higher beta for slower decay
+    # threshold_range = [0.05, 0.1, 0.15]
+    # beta_range = [0.95, 0.97, 0.99]
+
+    
+    
     # Setup for training
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 7))
     ax1.set_title("Training Loss")
@@ -152,13 +164,65 @@ def train_as_hypp_change(
     for epoch in range(start_epoch, num_epochs):
         for i, batch in enumerate(train_loader):
             data, targets, *_ = batch
+            # inspect_batch(data)
+            amp = 10
+            data = data *10
+        
             data = data.permute(3, 0, 2, 1).squeeze()
             data, targets = data.to(device), targets.to(device)
 
             # Training step
             net.train()
             spk_rec = model.forward(data, timestep)
+            
+            # Monitor spiking metrics
+            # spike_freq = spk_rec.sum(dim=0).mean().item()  # Aggregate across all timesteps
+            # normalized_spiking_frequency = spike_freq / timestep
+            # print(f"Normalized Spiking Frequency: {normalized_spiking_frequency:.2f}")
+
+            # sparsity = (spk_rec.sum(dim=2) > 0).float().mean(dim=0).mean().item() * 100
+            # print(f"Sparsity: {sparsity:.2f}%")
+
+            # Adjust hyperparameters if needed
+            # if normalized_spiking_frequency < 10 or normalized_spiking_frequency > 50 or sparsity < 10 or sparsity > 30:
+            #     print("Adjusting hyperparameters to meet spiking criteria...")
+            #     for threshold in threshold_range:
+            #         for beta in beta_range:
+            #             print(f"Adjusting Parameters: thresholdLIF={threshold}, betaLIF={beta}")
+            #             nn_model = SNNModel(
+            #                 num_inputs=16,
+            #                 num_hidden=256,
+            #                 num_outputs=35,
+            #                 betaLIF=beta,
+            #                 tresholdLIF=threshold,
+            #                 device=device
+            #             )
+            #             spk_rec = nn_model.forward(data, timestep)
+            #             #print(f"spk_rec shape: {spk_rec.shape}") # should[timestep, batch_size, num_neurons]
+                        
+            #             spike_freq = spk_rec.sum(dim=0).mean().item() / timestep
+            #             print(f"Updated Spiking Frequency: {spike_freq:.2f} spikes/neuron/timestep")
+            #             sparsity = (spk_rec > 0).float().mean(dim=(1, 2)).mean().item() * 100
+            #             print(f"Updated Sparsity: {sparsity:.2f}%")
+                        
+            #             print("inspect2:")
+            #             inspect_batch(data)
+            #             break
+
+            #             if 10 <= spike_freq <= 50 and 10 <= sparsity <= 30:
+            #                 print(f"Optimal Parameters Found: thresholdLIF={threshold}, betaLIF={beta}")
+            #                 break            
+            
+            # spike_freq = spk_rec.sum(dim=0).mean()  # Average spikes per neuron
+            # print(f"Average spiking frequency of a neurn: {spike_freq.item()}") #This calculates the mean spikes per neuron across all timesteps. The result is not per timestep, but an aggregate across the total eg. 801 timesteps for 700 neurons.
+            # normalized_spiking_frequency = spike_freq.item() / timestep # normalize this per timestep, lest have a goal of 10-50
+            # print(f"Normalized Spiking Frequency (spikes/neuron/timestep): {normalized_spiking_frequency:.2f}") # ---
+            
+            # sparsity = (spk_rec > 0).float().mean(dim=(1, 2))  # Fraction of active neurons per timestep
+            # print(f"Sparsity (percentage of active neurons): {sparsity.mean().item() * 100:.2f}%")
+
             loss_val = loss_fn(spk_rec, targets)
+
 
             optimizer.zero_grad()
             loss_val.backward()
@@ -325,3 +389,24 @@ def train(
         FT.save_checkpoint(checkpoint, checkpoint_dir, f"epoch_{epoch}.pth")
 
     plt.close(fig)
+    
+def inspect_batch(data):
+    """
+    Prints unique values and their counts in a batch.
+
+    Args:
+    - data (torch.Tensor): Input tensor representing a batch.
+
+    Returns:
+    - None
+    """
+    # Move data to CPU and flatten for simplicity
+    data_cpu = data.cpu().flatten()
+
+    # Find unique values and their counts
+    unique_values, counts = torch.unique(data_cpu, return_counts=True)
+
+    # Print unique values and counts
+    print("Unique values in batch:")
+    for value, count in zip(unique_values, counts):
+        print(f"Value: {value.item()}, Count: {count.item()}")

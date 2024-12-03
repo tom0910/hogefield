@@ -1,5 +1,5 @@
 import torch
-from core.Model import SNNModel, SNNModel_population
+from core.Model import SNNModel, SNNModel_population, SNNModel_droput
 
 
 class CheckpointManager:
@@ -22,6 +22,8 @@ class CheckpointManager:
         self.counter = 0
         self.optimizer_type = type(optimizer).__name__ if optimizer else None
         self.optimizer_params = {"lr": optimizer.param_groups[0]["lr"]} if optimizer else {}
+        self.correct_rate = 1
+        self.incorrect_rate = 0
 
     def save(self, file_path):
         """
@@ -39,6 +41,8 @@ class CheckpointManager:
             "test_acc_hist": self.test_acc_hist,
             "epoch": self.epoch,
             "counter": self.counter,
+            "correct_rate":self.correct_rate,
+            "incorrect_rate":self.incorrect_rate,
         }
         torch.save(checkpoint, file_path)
 
@@ -98,6 +102,8 @@ class CheckpointManager:
         counter = checkpoint.get("counter", 0)
         epoch = checkpoint.get("epoch", 0)
         hyperparameters = checkpoint.get("hyperparameters", {})
+        correct_rate = checkpoint.get("correct_rate",1)
+        incorrect_rate = checkpoint.get("incorrect_rate",0)
 
         # Create and return a CheckpointManager with loaded data
         manager = CheckpointManager(
@@ -110,11 +116,14 @@ class CheckpointManager:
         manager.test_acc_hist = test_acc_hist
         manager.counter = counter
         manager.epoch = epoch
+        manager.correct_rate = correct_rate
+        manager.incorrect_rate = incorrect_rate
         return manager
 
     MODEL_REGISTRY = {
         "SNNModel": SNNModel,
         "SNNModel_population": SNNModel_population,
+        "SNNModel_droput": SNNModel_droput
         
     }
     
@@ -166,6 +175,8 @@ class CheckpointManager:
         manager.test_acc_hist = checkpoint.get("test_acc_hist", [])
         manager.counter = checkpoint.get("counter", 0)
         manager.epoch = checkpoint.get("epoch", 0)
+        manager.correct_rate = checkpoint.get("correct_rate",1)
+        manager.incorrect_rate = checkpoint.get("incorrect_rate",0)
         return manager
 
 
@@ -199,6 +210,8 @@ class CheckpointManager:
         test_acc_hist = checkpoint.get("test_acc_hist", [])
         counter = checkpoint.get("counter", 0)
         epoch = checkpoint.get("epoch", 0)
+        correct_rate = checkpoint.get("correct_rate",1)
+        incorrect_rate = checkpoint.get("incorrect_rate",0)
 
         # Handle optimizer type and params
         optimizer_type = checkpoint.get("optimizer_type")
@@ -225,6 +238,8 @@ class CheckpointManager:
         manager.test_acc_hist = test_acc_hist
         manager.counter = counter
         manager.epoch = epoch
+        manager.correct_rate = correct_rate
+        manager.incorrect_rate = incorrect_rate
 
         return manager
 
@@ -313,6 +328,8 @@ class CheckpointManager:
         print("Test Accuracy History (Last 5):", self.test_acc_hist[-5:] if self.test_acc_hist else "No Data")
         print("Counter:", self.counter)
         print("Epoch:", self.epoch)
+        print("correct rate:", self.correct_rate)
+        print("incorrect rate:", self.incorrect_rate)
         print("===================================")
 
     

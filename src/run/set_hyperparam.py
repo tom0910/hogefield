@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import re
 import torch
 import shutil
-from core.Model import SNNModel  # Import SNNModel dynamicallyű
+from core.Model import SNNModel  
 from core.CheckPoinManager import CheckpointManager  # Adjust the import path as needed
 from utils.training_functional import prepare_dataset
 from utils.training_utils import train_as_hypp_change
@@ -47,6 +47,9 @@ HYPERPARAMETERS = [
     ("Device", config.DEVICE, tk.StringVar),
     ("Learning Rate", config.LEARNING_RATE, tk.DoubleVar),
     ("Filter Type", "custom", tk.StringVar, ["custom", "standard"]),
+    ("Model Type", "SNNModel", tk.StringVar, ["SNNModel", "SNNModel_population", "SNNModel_droput"]),  # New entry for v1.1
+    ("Correct Rate", 1, tk.DoubleVar),  # Added correct_rate
+    ("Incorrect Rate", 0, tk.DoubleVar),  # Added incorrect_rate    
 ]
     
 def get_hyperparameters():
@@ -94,9 +97,74 @@ def create_pth_model(h_params , model_id_value):
     # global pth_save_path
     # pth_save_path = model_path
     
-    create_and_save_model(h_params=h_params,model_path=model_path)
+    # create_and_save_model(h_params=h_params,model_path=model_path)
+    create_and_save_model_v1_1(h_params=h_params,model_path=model_path)
     
 ################ training 
+
+def main_train_v1_1():
+    # Select file and directory
+    file_path, dir_path = select_pth_and_dir()
+    if not file_path or not dir_path:
+        print("File or directory not selected. Exiting.")
+        return
+
+    # Setup directories
+    log_file = "output.log"
+    log_path = os.path.join(dir_path, log_file)
+    plots_dir = os.path.join(dir_path, "plots")
+    pth_dir = os.path.join(dir_path, "pth")
+
+    # Load checkpoint
+    chp_manager = CheckpointManager.load_checkpoint_with_defaults_v1_1(file_path=file_path)  # Use the v1.1 function
+    params = chp_manager.get_hyperparameters()
+
+    # Dynamically determine model type
+    model_type = params.get("model_type", "SNNModel")  # Default to SNNModel if not specified
+
+    # Align keys for the model class
+    model_hyperparams = {
+        "num_inputs": params.get("number_of_inputs", 16),
+        "num_hidden": params.get("number_of_hidden_neurons", 256),
+        "num_outputs": params.get("number_of_outputs", 35),
+        "betaLIF": params.get("beta_lif", 0.9),
+        "tresholdLIF": params.get("threshold_lif", 0.5),
+        "device": params.get("device", "cuda"),
+    }
+
+    # Dynamically initialize the model
+    model = CheckpointManager.MODEL_REGISTRY[model_type](**model_hyperparams)
+
+    # Overwrite the CheckpointManager with the correct model instance
+    chp_manager = CheckpointManager.load_checkpoint_with_model(file_path=file_path, model=model)
+
+    # Preprocess dataset by batch size
+    train_loader, test_loader = prepare_dataset(pth_file_path=file_path, params=params)
+
+    population_code = model_type == "SNNModel_population"
+    num_classes = params.get("number_of_outputs", 35)  # Original number of outputs
+
+    correct_rate= params.get("correct rate",1)
+    incorrect_rate= params.get("correct rate",0)
+    loss_fn = SNNF.mse_count_loss(
+        correct_rate=correct_rate,
+        incorrect_rate=incorrect_rate,
+        population_code=population_code,
+        num_classes=num_classes  # remains compatible with SNNModel
+    )
+
+    # Train the model
+    train_as_hypp_change(
+        checkpoint_mngr=chp_manager,
+        train_loader=train_loader,
+        test_loader=test_loader,
+        loss_fn=loss_fn,
+        num_epochs=100,
+        checkpoint_dir=pth_dir,
+        plots_dir=plots_dir,
+    )
+
+
 def select_pth_and_dir(initial_dir="/project/hyperparam"):
     """
     Select a .pth file and a directory using Tkinter dialogs.
@@ -175,6 +243,68 @@ def main_train():
         plots_dir=plots_dir,
     )
 ################ end of training
+
+def create_and_save_model_v1_1(h_params, model_path):
+    """
+    Validates parameters, creates a model dynamically from MODEL_REGISTRY, initializes the CheckpointManager, and saves to a file.
+
+    Args:
+        h_params (dict): Hyperparameters required to build the model.
+        model_path (str): Full path (including file name) to save the model.
+
+    Raises:
+        KeyError: If any required parameter is missing from h_params.
+        Exception: If model creation or saving fails.
+    """
+    if not h_params:
+        raise ValueError("h_params is None or empty.")
+
+    # Required keys validation
+    required_keys = [
+        "number_of_inputs", "number_of_hidden_neurons", "number_of_outputs",
+        "beta_lif", "threshold_lif", "device"
+    ]
+
+    missing_keys = [key for key in required_keys if key not in h_params]
+    if missing_keys:
+        raise KeyError(f"Missing required parameters: {', '.join(missing_keys)}")
+
+    # Dynamically select model type
+    model_type = h_params.get("model_type", "SNNModel")  # Default to SNNModel
+    if model_type not in CheckpointManager.MODEL_REGISTRY:
+        raise ValueError(f"Unknown model type: {model_type}")
+
+    # Construct translated parameters
+    translated_params = {
+        "num_inputs": int(h_params["number_of_inputs"]),
+        "num_hidden": int(h_params["number_of_hidden_neurons"]),
+        "num_outputs": int(h_params["number_of_outputs"]),
+        "betaLIF": float(h_params["beta_lif"]),
+        "tresholdLIF": float(h_params["threshold_lif"]),
+        "device": h_params["device"],
+    }
+
+    try:
+        # Create the model dynamically
+        model_class = CheckpointManager.MODEL_REGISTRY[model_type]
+        model = model_class(**translated_params)
+
+        # Create optimizer
+        optimizer = torch.optim.Adam(model.net.parameters(), lr=h_params.get("learning_rate", None))
+
+        # Initialize the CheckpointManager
+        manager = CheckpointManager(model=model, optimizer=optimizer, hyperparameters=h_params)
+
+        # Save using CheckpointManager
+        manager.save(model_path)
+
+        messagebox.showinfo("Success", f"Model saved to {model_path}")
+        print(f"Model saved to {model_path}")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to create model: {e}")
+        print(f"Error in create_and_save_model: {e}")
+
 
 
 def create_and_save_model(h_params, model_path):
@@ -603,7 +733,7 @@ if __name__ == "__main__":
         row=13, column=0, padx=10, pady=5
     )
 
-    ttk.Button(root, text="Train", command=lambda: main_train()).grid(
+    ttk.Button(root, text="Train", command=lambda: main_train_v1_1()).grid(
         row=14, column=0, padx=10, pady=5
     )
     

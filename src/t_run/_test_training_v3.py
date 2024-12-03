@@ -53,11 +53,14 @@ def select_pth_and_dir(initial_dir="/project/hyperparam"):
     return file_path, selected_dir
 
 def main_train():
-    # Select file and directory
-    file_path, dir_path = select_pth_and_dir()
-    if not file_path or not dir_path:
-        print("File or directory not selected. Exiting.")
-        return
+    # # Select file and directory
+    # file_path, dir_path = select_pth_and_dir()
+    # if not file_path or not dir_path:
+    #     print("File or directory not selected. Exiting.")
+    #     return
+
+    file_path="/project/hyperparam/checkLIF_09_05_20241202_140512/snn_model_checkLIF_09_05.pth"
+    dir_path="/project/hyperparam/checkLIF_09_05_20241202_140512/"
 
     # Setup directories
     log_file = "output.log"
