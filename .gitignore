@@ -59,4 +59,8 @@ cover/
 data/scratch/*
 !data/scratch/.gitkeep
 src/run/tk_test__widgets.py
-hyperparam/plots
+plots/
+pths/
+*.pth
+*.json
+*.wav

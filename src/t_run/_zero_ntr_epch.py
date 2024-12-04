@@ -31,8 +31,8 @@ def modify_pth_values(pth_file_path, output_file_path, keys_to_zero):
         print(f"An error occurred: {e}")
 
 # Example Usage
-pth_file_path = "/project/hyperparam/lrg_spky_resny/snn_model_lrg_spky_resny_th_lrincr/pth/epoch_99.pth"  # Input file path
-output_file_path = "/project/hyperparam/lrg_spky_resny/snn_model_lrg_spky_resny_th_lrincr/pth/epoch_last.pth"  # Output file path
+pth_file_path = "/project/hyperparam/trial_rate_chng/epoch_@48prcnt_rated.pth"  # Input file path
+output_file_path = "/project/hyperparam/trial_rate_chng/epoch_@48prcnt_zerod.pth"  # Output file path
 keys_to_zero = ["counter", "epoch"]  # Keys to set to zero
 
 modify_pth_values(pth_file_path, output_file_path, keys_to_zero)

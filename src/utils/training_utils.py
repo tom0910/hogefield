@@ -145,6 +145,7 @@ def train_as_hypp_change(
     # device      = params["device"]    
     device = validate_device(params["device"])
     print(f"Using device: {device}")
+    print(f"calculated timestep loaded at this point that is: {timestep}")
     
     # Define ranges for dynamic tuning
     # threshold_range = [1.0, 1.2, 1.5]
@@ -165,8 +166,7 @@ def train_as_hypp_change(
         for i, batch in enumerate(train_loader):
             data, targets, *_ = batch
             # inspect_batch(data)
-            amp = 10
-            data = data *10
+            data = data
         
             data = data.permute(3, 0, 2, 1).squeeze()
             data, targets = data.to(device), targets.to(device)

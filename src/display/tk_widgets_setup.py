@@ -237,7 +237,7 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     
     # Add an Entry widget for the filename
     filename_label = tk.Label(widget_frame, text="ID:")
-    filename_entry = tk.Entry(widget_frame, width=50)
+    filename_entry = tk.Entry(widget_frame, width=10)
 
     # Bind the save button to the function, passing the Entry widget as an argument
     #save_button.bind("<Button-1>", lambda event: on_save_button_click(filename_entry))    

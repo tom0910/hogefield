@@ -46,80 +46,6 @@ class CheckpointManager:
         }
         torch.save(checkpoint, file_path)
 
-    @staticmethod
-    def load_checkpoint_with_defaults(file_path):
-        """
-        Load a checkpoint from a file and initialize a CheckpointManager with the loaded data.
-
-        Args:
-            file_path (str): Path to the checkpoint file.
-
-        Returns:
-            CheckpointManager: An instance of CheckpointManager with loaded data, including model and optimizer (if present).
-        """
-        checkpoint = torch.load(file_path)
-
-        # Initialize model and optimizer variables
-        model = None
-        optimizer = None
-
-        # Load model if available
-        if "model_state_dict" in checkpoint:
-            from core.Model import SNNModel  # Adjust based on your code structure
-            hyperparameters = checkpoint.get("hyperparameters", {})
-            if all(key in hyperparameters for key in ["number_of_inputs", "number_of_hidden_neurons", "number_of_outputs", "beta_lif", "threshold_lif", "device"]):
-                model = SNNModel(
-                    num_inputs=hyperparameters["number_of_inputs"],
-                    num_hidden=hyperparameters["number_of_hidden_neurons"],
-                    num_outputs=hyperparameters["number_of_outputs"],
-                    betaLIF=hyperparameters["beta_lif"],
-                    tresholdLIF=hyperparameters["threshold_lif"],
-                    device=hyperparameters["device"],
-                )
-                model.net.load_state_dict(checkpoint["model_state_dict"])
-            else:
-                print("Warning: Hyperparameters required to initialize the model are missing in the checkpoint.")
-
-        # Load optimizer if available
-        optimizer_type = checkpoint.get("optimizer_type")
-        optimizer_params = checkpoint.get("optimizer_params", {})
-        # learning_rate = optimizer_params.get("lr", hyperparameters.get("learning_rate", 0.001))  # Default to 0.001 if missing
-        if "optimizer_state_dict" in checkpoint and model:
-            optimizer_map = {
-                "Adam": torch.optim.Adam,
-                "SGD": torch.optim.SGD,
-                "RMSprop": torch.optim.RMSprop,
-            }
-            optimizer_class = optimizer_map.get(optimizer_type, torch.optim.Adam)
-            optimizer = optimizer_class(model.net.parameters(), **optimizer_params)
-            # optimizer = optimizer_class(model.net.parameters(), lr=learning_rate)
-            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-
-        # Extract additional data
-        loss_hist = checkpoint.get("loss_hist", [])
-        acc_hist = checkpoint.get("acc_hist", [])
-        test_acc_hist = checkpoint.get("test_acc_hist", [])
-        counter = checkpoint.get("counter", 0)
-        epoch = checkpoint.get("epoch", 0)
-        hyperparameters = checkpoint.get("hyperparameters", {})
-        correct_rate = checkpoint.get("correct_rate",1)
-        incorrect_rate = checkpoint.get("incorrect_rate",0)
-
-        # Create and return a CheckpointManager with loaded data
-        manager = CheckpointManager(
-            model=model,
-            optimizer=optimizer,
-            hyperparameters=hyperparameters,
-        )
-        manager.loss_hist = loss_hist
-        manager.acc_hist = acc_hist
-        manager.test_acc_hist = test_acc_hist
-        manager.counter = counter
-        manager.epoch = epoch
-        manager.correct_rate = correct_rate
-        manager.incorrect_rate = incorrect_rate
-        return manager
-
     MODEL_REGISTRY = {
         "SNNModel": SNNModel,
         "SNNModel_population": SNNModel_population,
@@ -132,7 +58,7 @@ class CheckpointManager:
         checkpoint = torch.load(file_path)
 
         # Extract model type and hyperparameters
-        model_type = checkpoint.get("model_type", "SNNModel")  # Default to SNNModel
+        model_type = checkpoint.get("model_type", "SNNModel")  # Default to SNNModel 
         hyperparameters = checkpoint.get("hyperparameters", {})
 
         # Dynamically instantiate the model
@@ -287,6 +213,7 @@ class CheckpointManager:
         """
         return self.hyperparameters
 
+    # not implemented
     def set_hyperparameters(self, hyperparameters):
         """
         Update the hyperparameters.
@@ -331,24 +258,3 @@ class CheckpointManager:
         print("correct rate:", self.correct_rate)
         print("incorrect rate:", self.incorrect_rate)
         print("===================================")
-
-    
-    # def print_contents(self):
-    #     """
-    #     Print the current state and contents of the CheckpointManager instance to the terminal.
-    #     """
-    #     print("=== CheckpointManager Contents ===")
-    #     print("Model:", "Present" if self.model else "None")
-    #     print("Optimizer:", "Present" if self.optimizer else "None")
-    #     print("Optimizer Type:", self.optimizer_type)
-    #     print("Optimizer Parameters:", self.optimizer_params)
-    #     print("Hyperparameters:")
-    #     for key, value in self.hyperparameters.items():
-    #         print(f"  {key}: {value}")
-    #     print("Loss History:", self.loss_hist)
-    #     print("Accuracy History:", self.acc_hist)
-    #     print("Test Accuracy History:", self.test_acc_hist)
-    #     print("Counter:", self.counter)
-    #     print("Epoch:", self.epoch)
-    #     print("===================================")
-

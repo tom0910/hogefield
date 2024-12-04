@@ -126,7 +126,10 @@ class SNNModel:
 
         # Surrogate gradient for spiking neuron
         spike_grad = surrogate.fast_sigmoid()
-
+        # beta_idep = torch.rand((self.num_hidden), dtype = torch.float)
+        # print(self.num_hidden)
+        beta_idep_out = torch.rand((self.num_outputs), dtype = torch.float)
+        # beta_indep = torch.rand(1)
         # Define the SNN
         self.net = nn.Sequential(
             nn.Linear(self.num_inputs, self.num_hidden), 
@@ -136,6 +139,16 @@ class SNNModel:
             nn.Linear(self.num_hidden, self.num_outputs),
             snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF, output=True)
         ).to(self.device)
+        
+        
+        # self.net = nn.Sequential(
+        #     nn.Linear(self.num_inputs, self.num_hidden), 
+        #     snn.Leaky(beta=betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF),
+        #     nn.Linear(self.num_hidden, self.num_hidden),
+        #     snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF),
+        #     nn.Linear(self.num_hidden, self.num_outputs),
+        #     snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF, output=True)
+        # ).to(self.device)
 
     def forward(self, data, timestep):
         """

@@ -24,8 +24,8 @@ def main_train_v1_1():
     # file_path = "/project/hyperparam/checkLIF_09_02_20241202_231742/snn_model_checkLIF_09_02.pth"
     # dir_path  = "/project/hyperparam/checkLIF_09_02_20241202_231742"
     
-    file_path = "/project/hyperparam/checkLIF_09_02_20241202_231742/snn_model_checkLIF_09_02.pth"
-    dir_path  = "/project/hyperparam/checkLIF_09_02_20241202_231742"
+    file_path = "/project/hyperparam/standard_n22_8khz/snn_model_hogefield.pth"
+    dir_path  = "/project/hyperparam/standard_n22_8khz"
 
     # Setup directories
     log_file = "output.log"

@@ -17,7 +17,7 @@ from utils.training_functional import prepare_dataset
 from utils.training_utils import train_as_hypp_change
 from snntorch import functional as SNNF
 
-DEFAULT_DIR = "/project/hyperparam"
+DEFAULT_DIR = "/project/hypertrain"
 if not os.path.exists(DEFAULT_DIR):
     os.makedirs(DEFAULT_DIR)
 
@@ -62,7 +62,7 @@ def create_pth_model(h_params , model_id_value):
     """
     Create an instance of the SNNModel using loaded parameters and save it.
     """
-    global model, last_file_path #,params
+    global model, last_file_path, pth_save_path
 
     # Gather parameters from widgets
     # params = {label.lower().replace(" ", "_"): widget.get() for label, widget in hyperparameter_widgets}
@@ -104,7 +104,12 @@ def create_pth_model(h_params , model_id_value):
 
 def main_train_v1_1():
     # Select file and directory
-    file_path, dir_path = select_pth_and_dir()
+    global pth_saved_dir, pth_save_path
+
+    # Ensure pth_save_path is valid before checking with os.path.exists
+    dir = pth_saved_dir if pth_saved_dir and os.path.exists(pth_saved_dir) else DEFAULT_DIR
+    file_path, dir_path = select_pth_and_dir(initial_dir=dir)
+
     if not file_path or not dir_path:
         print("File or directory not selected. Exiting.")
         return
@@ -119,18 +124,21 @@ def main_train_v1_1():
     chp_manager = CheckpointManager.load_checkpoint_with_defaults_v1_1(file_path=file_path)  # Use the v1.1 function
     params = chp_manager.get_hyperparameters()
 
-    # Dynamically determine model type
-    model_type = params.get("model_type", "SNNModel")  # Default to SNNModel if not specified
-
     # Align keys for the model class
-    model_hyperparams = {
-        "num_inputs": params.get("number_of_inputs", 16),
-        "num_hidden": params.get("number_of_hidden_neurons", 256),
-        "num_outputs": params.get("number_of_outputs", 35),
-        "betaLIF": params.get("beta_lif", 0.9),
-        "tresholdLIF": params.get("threshold_lif", 0.5),
-        "device": params.get("device", "cuda"),
-    }
+    try:
+        # Dynamically determine model type
+        model_type = params.get("model_type", "SNNModel")  # Default to SNNModel if not specified
+        
+        model_hyperparams = {
+            "num_inputs": params.get("number_of_inputs"),
+            "num_hidden": params.get("number_of_hidden_neurons"),
+            "num_outputs": params.get("number_of_outputs"),
+            "betaLIF": params.get("beta_lif"),
+            "tresholdLIF": params.get("threshold_lif"),
+            "device": params.get("device"),
+        }
+    except KeyError as e:
+        raise ValueError(f"Missing required parameter from checkpoint (pth): {e}")
 
     # Dynamically initialize the model
     model = CheckpointManager.MODEL_REGISTRY[model_type](**model_hyperparams)
@@ -165,7 +173,7 @@ def main_train_v1_1():
     )
 
 
-def select_pth_and_dir(initial_dir="/project/hyperparam"):
+def select_pth_and_dir(initial_dir=DEFAULT_DIR):
     """
     Select a .pth file and a directory using Tkinter dialogs.
     Returns the file path and directory path.
@@ -525,7 +533,8 @@ class WidgetManager:
 
         try:
             # Load the checkpoint manager
-            checkpoint_manager = CheckpointManager.load_checkpoint_with_defaults(pth_file_path)
+            checkpoint_manager = CheckpointManager.load_checkpoint_with_defaults_v1_1(pth_file_path)
+            # checkpoint_manager = CheckpointManager.load_checkpoint_with_defaults(pth_file_path)
 
             # Extract hyperparameters and map them to widgets
             hyperparameters = checkpoint_manager.get_hyperparameters()
@@ -683,6 +692,21 @@ def run_second_app():
     """
     subprocess.Popen(["python3", "/project/src/run/side_demonstrate_s2s.py"], start_new_session=True)
 
+def run_train_app(pth_saved_dir, DEFAULT_DIR):
+    """
+    Launch an external Python application with parameters as command-line arguments.
+    """
+    if not pth_saved_dir or not os.path.exists(pth_saved_dir):
+        messagebox.showwarning("Note", "Saved directory is not set or does not exist.")
+
+    args = [
+        "python3",
+        "/project/src/run/side_maintrain.py",
+        str(pth_saved_dir),
+        str(DEFAULT_DIR),
+    ]
+    subprocess.Popen(args, start_new_session=True)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
@@ -704,24 +728,14 @@ if __name__ == "__main__":
     ttk.Button(
             root,
             text="Populate (from JSON)",
-            command=lambda: manager.load_from_json(filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")]))
+            command=lambda: manager.load_from_json(filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")], initialdir=DEFAULT_DIR))
         ).grid(row=4, column=0, padx=10, pady=5) 
     
     
-    # DO NOT DELETE THIS!!!
     ttk.Button(root, text="Create new (.pth) for training", command=lambda: create_pth_model(manager.get_hyperparameters(), manager.get_value_by_label("Model ID") )).grid(
         row=5, column=0, padx=10, pady=5
     )
     
-    # ttk.Button(
-    #         root, 
-    #         text="Open (.pth)", 
-    #         command=lambda: manager.load_from_pth(filedialog.askopenfilename(filetypes=[("PTH Files", "*.pth")]))
-    #         ).grid(
-    #     row=6, column=0, padx=10, pady=5
-    # )   
-    
-
     ttk.Button(root, text="Run Second App", command=run_second_app).grid(
         row=8, column=0, padx=10, pady=5)
     
@@ -733,9 +747,18 @@ if __name__ == "__main__":
         row=13, column=0, padx=10, pady=5
     )
 
-    ttk.Button(root, text="Train", command=lambda: main_train_v1_1()).grid(
-        row=14, column=0, padx=10, pady=5
+    # ttk.Button(root, text="Train", command=lambda: run_train_app(pth_saved_dir, pth_save_path, DEFAULT_DIR)).grid(
+    #     row=14, column=0, padx=10, pady=5
+    # )
+    
+    ttk.Button(root, text="Train", command=lambda: run_train_app(pth_saved_dir, DEFAULT_DIR)).grid(
+    row=14, column=0, padx=10, pady=5   
     )
+
+
+    # ttk.Button(root, text="Train", command=lambda: main_train_v1_1()).grid(
+    #     row=14, column=0, padx=10, pady=5
+    # )
     
 
     root.mainloop()
