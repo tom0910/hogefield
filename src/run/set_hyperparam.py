@@ -94,8 +94,8 @@ def create_pth_model(h_params , model_id_value):
     pth_saved_dir = save_dir
 
     model_path = os.path.join(save_dir, f"snn_model_{model_id_value}.pth")
-    # global pth_save_path
-    # pth_save_path = model_path
+    global pth_save_path
+    pth_save_path = model_path
     
     # create_and_save_model(h_params=h_params,model_path=model_path)
     create_and_save_model_v1_1(h_params=h_params,model_path=model_path)
@@ -692,20 +692,87 @@ def run_second_app():
     """
     subprocess.Popen(["python3", "/project/src/run/side_demonstrate_s2s.py"], start_new_session=True)
 
-def run_train_app(pth_saved_dir, DEFAULT_DIR):
+def run_train_app(pth_saved_dir, DEFAULT_DIR, pth_save_path):
     """
     Launch an external Python application with parameters as command-line arguments.
     """
+    # Ensure the default directory exists
+    os.makedirs(DEFAULT_DIR, exist_ok=True)
+
+    # Tkinter root setup
+    root = tk.Tk()
+    root.withdraw()  # Hide the main Tkinter window
+
+    # Ensure the saved directory exists or prompt the user
     if not pth_saved_dir or not os.path.exists(pth_saved_dir):
-        messagebox.showwarning("Note", "Saved directory is not set or does not exist.")
+        pth_saved_dir = filedialog.askdirectory(
+            initialdir=DEFAULT_DIR,
+            title="Select Saved Directory"
+            )
+        if not pth_saved_dir:
+            raise ValueError("No valid saved directory selected. Exiting.")
+
+    # Ensure the saved .pth file exists or prompt the user
+    if not pth_save_path or not os.path.exists(pth_save_path):
+        pth_save_path = filedialog.askopenfilename(
+            initialdir=pth_saved_dir,
+            title="Select a .pth File",
+            filetypes=[("PyTorch Files", "*.pth"), ("All Files", "*.*")]
+        )
+        if not pth_save_path:
+            raise ValueError("No valid .pth file selected. Exiting.")
 
     args = [
         "python3",
         "/project/src/run/side_maintrain.py",
         str(pth_saved_dir),
-        str(DEFAULT_DIR),
+        str(pth_save_path),
     ]
+    # # Prepare command-line arguments
+    # args = [
+    #     "python3",
+    #     "/project/src/run/side_maintrain.py",
+    #     str(pth_saved_dir),
+    #     str(pth_save_path),
+    #     str(DEFAULT_DIR),
+    # ]
+
+    # Launch the external application
     subprocess.Popen(args, start_new_session=True)
+
+
+
+# def run_train_app(pth_saved_dir, DEFAULT_DIR, pth_save_path):
+#     """
+#     Launch an external Python application with parameters as command-line arguments.
+#     """
+#     # Ensure the initial directory exists
+#     os.makedirs(DEFAULT_DIR, exist_ok=True)
+    
+#     # Tkinter root setup
+#     root = tk.Tk()
+#     root.withdraw()  # Hide the main Tkinter window
+        
+#     if not pth_saved_dir or not os.path.exists(pth_saved_dir):
+#         # messagebox.showwarning("Note", "Saved directory is not set or does not exist.")
+#         pth_saved_dir = filedialog.askdirectory(title="Select Saved Directory")
+    
+#     if not pth_save_path or not os.path.exists(pth_save_path):
+#         # messagebox.showwarning("Note", "Saved dipath is not set or does not exist.")
+#         file_path = filedialog.askopenfilename(
+#             initialdir=DEFAULT_DIR,
+#             title="Select a .pth File",
+#             filetypes=[("PyTorch Files", "*.pth"), ("All Files", "*.*")]
+#         )
+    
+#     args = [
+#         "python3",
+#         "/project/src/run/side_maintrain.py",
+#         str(pth_saved_dir),
+#         str(pth_save_path),
+#         str(DEFAULT_DIR),
+#     ]
+#     subprocess.Popen(args, start_new_session=True)
 
 
 if __name__ == "__main__":
@@ -751,7 +818,7 @@ if __name__ == "__main__":
     #     row=14, column=0, padx=10, pady=5
     # )
     
-    ttk.Button(root, text="Train", command=lambda: run_train_app(pth_saved_dir, DEFAULT_DIR)).grid(
+    ttk.Button(root, text="Train", command=lambda: run_train_app(pth_saved_dir, DEFAULT_DIR, pth_save_path)).grid(
     row=14, column=0, padx=10, pady=5   
     )
 
