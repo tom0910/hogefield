@@ -60,6 +60,18 @@ class CustomMelScale(MelScale):
                 norm=self.norm,
                 mel_scale=self.mel_scale,
             )
+            
+        elif self.filter_type == "narrowband":
+            fb = standard_narrowband(
+                n_freqs=self.n_stft,
+                f_min=self.f_min,
+                f_max=self.f_max,
+                n_mels=self.n_mels,
+                sample_rate=self.sample_rate,
+                norm=self.norm,
+                mel_scale=self.mel_scale,
+                spread=self.spread
+            )
         else:
             fb = self.fb  # Use the original filter bank from MelScale
 
@@ -67,8 +79,8 @@ class CustomMelScale(MelScale):
 
     def set_filter_type(self, new_filter_type: str):
         """Change filter type and update the filter bank."""
-        if new_filter_type not in ["standard", "custom"]:
-            raise ValueError("filter_type must be 'standard' or 'custom'")
+        if new_filter_type not in ["standard", "custom", "narrowband"]:
+            raise ValueError("filter_type must be 'standard' or 'custom' or 'narrowband'")
         self.filter_type = new_filter_type
         self.update_filter_bank()
 
@@ -137,6 +149,38 @@ def _mel_to_hz(mels: Tensor, mel_scale: str = "htk") -> Tensor:
     freqs[log_t] = min_log_hz * torch.exp(logstep * (mels[log_t] - min_log_mel))
 
     return freqs
+
+def standard_narrowband(
+    n_freqs: int,
+    f_min: float,
+    f_max: float,
+    n_mels: int,
+    sample_rate: int,
+    spread: int,
+    norm: Optional[str] = None,
+    mel_scale: str = "htk",
+):
+    
+    # Calculate all_freqs and f_pts and store as attributes
+    # self.all_freqs = torch.linspace(0, sample_rate // 2, n_stft)
+    # self.f_pts = torch.linspace(f_min, f_max, n_mels).tolist()  # Example center frequencies
+    # freq bins
+    all_freqs = torch.linspace(0, sample_rate // 2, n_freqs)
+
+    # calculate mel freq bins
+    m_min = _hz_to_mel(f_min, mel_scale=mel_scale)
+    m_max = _hz_to_mel(f_max, mel_scale=mel_scale)
+
+    m_pts = torch.linspace(m_min, m_max, n_mels) # +2
+    f_pts = _mel_to_hz(m_pts, mel_scale=mel_scale)
+    spread = 2*(sample_rate//2)/(n_freqs-1) # Spread of 3 Hz on either side of each midpoint
+    fb = create_triangular_filterbank_variable_spread(all_freqs=all_freqs,f_pts=f_pts,spread=spread)
+    
+    if norm == "slaney":
+        enorm = 2.0 / (f_pts[2 : n_mels + 2] - f_pts[:n_mels])
+        fb *= enorm.unsqueeze(0)
+
+    return fb
 
 def custom_melscale_fbanks(
     n_freqs: int,

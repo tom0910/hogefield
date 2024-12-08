@@ -19,6 +19,7 @@ DEFAULT_THRESHOLD = 0.00420 # in range [0..1] when melspectrogram is normalized
 DEFAULT_FILTER_CHOICE="standard"
 FILTER_VALUE1 = "standard"
 FILTER_VALUE2 = "custom"
+FILTER_VALUE3  = "narrowband"
 
 DEFAULT_FILTER_SPCTRGRM_PLT_CHOICE="sptrgm"
 DEFAULT_SPCTRGRM_PLT="sptrgm"

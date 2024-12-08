@@ -46,10 +46,10 @@ HYPERPARAMETERS = [
     ("Threshold LIF", config.THRESOLD_LIF, tk.DoubleVar),
     ("Device", config.DEVICE, tk.StringVar),
     ("Learning Rate", config.LEARNING_RATE, tk.DoubleVar),
-    ("Filter Type", "custom", tk.StringVar, ["custom", "standard"]),
-    ("Model Type", "SNNModel", tk.StringVar, ["SNNModel", "SNNModel_population", "SNNModel_droput"]),  # New entry for v1.1
-    ("Correct Rate", 1, tk.DoubleVar),  # Added correct_rate
-    ("Incorrect Rate", 0, tk.DoubleVar),  # Added incorrect_rate    
+    ("Filter Type", "custom", tk.StringVar, ["custom", "standard", "narrowband"]),
+    ("Model Type", "SNNModel", tk.StringVar, ["SNNModel", "SNNModel_population", "SNNModel_droput", "DynamicSNNModel"]),  # New entry for v1.1
+    ("Correct Rate", 1, tk.DoubleVar),  
+    ("Incorrect Rate", 0, tk.DoubleVar),  
 ]
     
 def get_hyperparameters():
@@ -722,57 +722,45 @@ def run_train_app(pth_saved_dir, DEFAULT_DIR, pth_save_path):
         if not pth_save_path:
             raise ValueError("No valid .pth file selected. Exiting.")
 
-    args = [
-        "python3",
-        "/project/src/run/side_maintrain.py",
-        str(pth_saved_dir),
-        str(pth_save_path),
-    ]
-    # # Prepare command-line arguments
-    # args = [
-    #     "python3",
-    #     "/project/src/run/side_maintrain.py",
-    #     str(pth_saved_dir),
-    #     str(pth_save_path),
-    #     str(DEFAULT_DIR),
+    # Extract session name and log file name
+    dir_name = os.path.basename(os.path.normpath(pth_saved_dir))  # Last directory in pth_sa
+    file_name = os.path.basename(pth_save_path).replace(".pth", "")  # Remove .pth extension
+    session_name = dir_name  # Use the file name as the screen session name
+    
+    log_file = f"{file_name}.log"
+    log_path = os.path.join(pth_saved_dir, log_file)  # Log path in pth_saved_dir    
+    
+    if not os.access(os.path.dirname(log_path), os.W_OK):
+        raise PermissionError(f"No write access to: {log_path}")
+    
+    # Check if the screen session already exists
+    try:
+        existing_sessions = subprocess.check_output(["screen", "-ls"], stderr=subprocess.DEVNULL).decode("utf-8")
+        if session_name in existing_sessions:
+            print(f"Screen session '{session_name}' already exists. Skipping creation.")
+            return
+    except subprocess.CalledProcessError:
+        pass  # No active sessions; proceed with creating the new session
+
+    # Screen command to run in detached mode
+    # screen_command = [
+    #     "screen", "-S", session_name, "-dm", "-L","bash", "-c",
+    #     f"python3 /project/src/run/side_maintrain.py {pth_saved_dir} {pth_save_path}"
     # ]
 
-    # Launch the external application
-    subprocess.Popen(args, start_new_session=True)
+    screen_command = [
+    "screen", "-S", session_name, "-dm", "-L", "-Logfile", log_path, "bash", "-c",
+    f"python3 /project/src/run/side_maintrain.py {pth_saved_dir} {pth_save_path}"
+    ]
+
+    print(f"Starting training in screen session: {session_name}")
+    print(f"Logs will be saved to: {log_path}")
 
 
-
-# def run_train_app(pth_saved_dir, DEFAULT_DIR, pth_save_path):
-#     """
-#     Launch an external Python application with parameters as command-line arguments.
-#     """
-#     # Ensure the initial directory exists
-#     os.makedirs(DEFAULT_DIR, exist_ok=True)
-    
-#     # Tkinter root setup
-#     root = tk.Tk()
-#     root.withdraw()  # Hide the main Tkinter window
-        
-#     if not pth_saved_dir or not os.path.exists(pth_saved_dir):
-#         # messagebox.showwarning("Note", "Saved directory is not set or does not exist.")
-#         pth_saved_dir = filedialog.askdirectory(title="Select Saved Directory")
-    
-#     if not pth_save_path or not os.path.exists(pth_save_path):
-#         # messagebox.showwarning("Note", "Saved dipath is not set or does not exist.")
-#         file_path = filedialog.askopenfilename(
-#             initialdir=DEFAULT_DIR,
-#             title="Select a .pth File",
-#             filetypes=[("PyTorch Files", "*.pth"), ("All Files", "*.*")]
-#         )
-    
-#     args = [
-#         "python3",
-#         "/project/src/run/side_maintrain.py",
-#         str(pth_saved_dir),
-#         str(pth_save_path),
-#         str(DEFAULT_DIR),
-#     ]
-#     subprocess.Popen(args, start_new_session=True)
+    try:
+        subprocess.run(screen_command, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to launch screen session: {e}")
 
 
 if __name__ == "__main__":

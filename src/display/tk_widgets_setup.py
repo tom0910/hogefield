@@ -165,7 +165,7 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
         parent=widget_frame,
         variable=filter_choice_var,
         label_text="Select Mode:",
-        options=[("standard", config.FILTER_VALUE1), ("custom", config.FILTER_VALUE2)]
+        options=[("standard", config.FILTER_VALUE1), ("custom", config.FILTER_VALUE2), ("narrowband", config.FILTER_VALUE3)]
     )    
     
     mel_filter_plot_var = tk.StringVar(value=config.DEFAULT_FILTER_SPCTRGRM_PLT_CHOICE)
