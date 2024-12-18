@@ -66,6 +66,7 @@ def calculate_number_of_input_neurons():
 import utils
 
 from snntorch import utils as snn_utils
+# spk_rec = model.forward(data, timestep)
 def forward_pass(net, data, timestep):  #nem ezt használom 
   spk_rec = []
   snn_utils.reset(net)  # resets hidden states for all LIF neurons in net
@@ -105,7 +106,10 @@ def batch_accuracy(loader, net, timestep, device):
             targets = targets.to(device)
             
             # Perform the forward pass
-            spk_rec = forward_pass(net, data, timestep)
+            ###?
+            #spk_rec = model.forward(data, timestep) #for training data
+            # spk_rec = forward_pass(net, data, timestep) # original code needs change
+            spk_rec = net.forward(data, timestep)
             
             # Calculate accuracy for the current batch
             acc += SNNF.accuracy_rate(spk_rec, targets) * spk_rec.size(1)
@@ -158,6 +162,8 @@ def prepare_dataset(pth_file_path, params):
             pth_file_path=pth_file_path
         )
     )
+    # below might need to be chaged to
+    #  return train_loader, test_loader  (trailing coma looks bad)
     return train_loader, test_loader, 
 
 # def save_checkpoint(checkpoint, checkpoint_dir, filename):

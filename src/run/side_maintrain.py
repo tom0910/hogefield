@@ -12,7 +12,7 @@ import re
 import torch
 import shutil
 from core.Model import SNNModel  
-from core.CheckPoinManager import CheckpointManager  # Adjust the import path as needed
+from core.CheckPoinManager import CheckpointManager
 from utils.training_functional import prepare_dataset
 from utils.training_utils import train_as_hypp_change
 from snntorch import functional as SNNF

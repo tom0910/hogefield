@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 from snntorch import utils
-from snntorch import surrogate
+from snntorch import surrogate,utils
 import snntorch as snn
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class SNNModel_dl:
@@ -98,13 +100,15 @@ class SNNModel_dl:
             spk_rec.append(spk_out)
 
         return torch.stack(spk_rec)  # Shape: [timestep, batch_size, output_size]
+    def get_parameters(self):
+        return getattr(self, "net", self).parameters()
+
 
 
 
 # Define Model Parameters (GLOBAL values should be passed here)
 class SNNModel:
     def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device):
-                #  , learning_rate):
         """
         Initializes the Spiking Neural Network (SNN) with the given parameters.
 
@@ -122,7 +126,6 @@ class SNNModel:
         self.betaLIF = betaLIF
         self.tresholdLIF = tresholdLIF
         self.device = device
-        # self.learning_rate = learning_rate
 
         # Surrogate gradient for spiking neuron
         spike_grad = surrogate.fast_sigmoid()
@@ -167,6 +170,9 @@ class SNNModel:
         return torch.stack(spk_rec)  # Shape: [timestep, batch_size, output_size]
     
     # Optional: Visualization Utility (Specific to this model)
+    def get_parameters(self):
+        return getattr(self, "net", self).parameters()
+
 
 class SNNModel_population:
     def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device):
@@ -216,10 +222,12 @@ class SNNModel_population:
             spk_rec.append(spk_out)
 
         return torch.stack(spk_rec)  # Shape: [timestep, batch_size, output_size]
+    def get_parameters(self):
+        return getattr(self, "net", self).parameters()
+
 
 class SNNModel_droput:
     def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device):
-                #  , learning_rate):
         """
         Initializes the Spiking Neural Network (SNN) with the given parameters.
 
@@ -237,7 +245,6 @@ class SNNModel_droput:
         self.betaLIF = betaLIF
         self.tresholdLIF = tresholdLIF
         self.device = device
-        # self.learning_rate = learning_rate
 
         # Surrogate gradient for spiking neuron
         spike_grad = surrogate.fast_sigmoid()
@@ -254,6 +261,16 @@ class SNNModel_droput:
             nn.Dropout(p=0.3),
             snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF, output=True)
         ).to(self.device)
+
+##################### to be del: at batch accuracy
+# spk_rec = []
+#   snn_utils.reset(net)  # resets hidden states for all LIF neurons in net
+#   for step in range(timestep):
+#       spk_out, mem_out = net(data[step])
+#       spk_rec.append(spk_out)
+#  return torch.stack(spk_rec)
+#####################
+
 
     def forward(self, data, timestep):
         """
@@ -281,74 +298,229 @@ class SNNModel_droput:
 
         return torch.stack(spk_rec)  # Shape: [timestep, batch_size, output_size]
     
-    # Optional: Visualization Utility (Specific to this model)
+    def get_parameters(self):
+        return getattr(self, "net", self).parameters()
 
-class SNNModel_depth:
-    def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device):
-                #  , learning_rate):
-        """
-        Initializes the Spiking Neural Network (SNN) with the given parameters.
+#####Maintaing compatibility with old code DO THIS:
+# Update to BaseSNNModel
 
-        Parameters:
-        - num_inputs: Number of input neurons.
-        - num_hidden: Number of neurons in the hidden layers.
-        - num_outputs: Number of output neurons.
-        - betaLIF: Decay factor for Leaky Integrate-and-Fire neurons.
-        - tresholdLIF: Firing threshold for LIF neurons.
-        - device: Device to run the model (e.g., 'cpu' or 'cuda').
-        """
+# class BaseSNNModel(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+
+#     def get_net(self):
+#         return getattr(self, "net", self)
+
+# Training Code Compatibility
+
+# Replace model.net.eval() with:
+
+# model.get_net().eval()
+
+# Replace model.net.parameters() with:
+
+# model.get_net().parameters()
+
+# Replace model.net.forward(data) with:
+
+# model.forward(data)
+
+# This ensures seamless compatibility with both model implementations.
+
+##############################################
+
+class BaseSNNModel(nn.Module):
+    def __init__(self, num_inputs, num_hidden, num_outputs, tresholdLIF, device):
+        super().__init__()
         self.num_inputs = num_inputs
         self.num_hidden = num_hidden
         self.num_outputs = num_outputs
-        self.betaLIF = betaLIF
         self.tresholdLIF = tresholdLIF
         self.device = device
-        # self.learning_rate = learning_rate
 
-        # Surrogate gradient for spiking neuron
+        #the important self.net
+        # self.net = None  # this leaves None in custom forward
+
+    def forward(self, *args, **kwargs):
+        raise NotImplementedError("Forward method must be implemented in the derived class.")
+
+    # def get_parameters(self):
+    #     return super().parameters()  # Correctly registers all layers    
+    def get_parameters(self):
+        return self.parameters()  # Works for both models
+
+    def get_state_dict(self):
+        return self.net.state_dict()
+    # usage
+    # model.get_net().state_dict()  # Works for both old and new models
+
+    # def get_state_dict(self):
+    #     if hasattr(self, "net"):
+    #         return self.net.state_dict()  # Old models
+    #     else:
+    #         return super().state_dict()  # New models     
+    # usgae example:
+    # "model_state_dict": self.model.get_state_dict() if self.model else None,
+    
+    def get_net(self):
+        return getattr(self, "net", self)   
+    
+    # def get_parameters(self):
+    #     if self.net is not None:
+    #         return self.net.parameters()  # For models with self.net defined
+    #     return super().parameters()       # For models managing layers manually
+    # # usage:
+    # # model.get_parameters() 
+    
+    def train(self, mode=True):
+        super().train(mode)  # This sets the training mode for all registered layers
+        self.training = mode  # Ensure compatibility if needed    
+    
+    # def train(self, mode=True):
+    #     for layer in self.net:
+    #         if isinstance(layer, nn.Module):
+    #             layer.train(mode)
+    #     self.training = mode
+
+    def load_state_dict(self, state_dict, strict=True):
+        if hasattr(self, "net"):
+            self.net.load_state_dict(state_dict, strict)
+        else:
+            super().load_state_dict(state_dict, strict)
+        
+    # def load_state_dict(self, state_dict):
+    #     if hasattr(self, "net"):
+    #         # For old models using nn.Sequential
+    #         self.net.load_state_dict(state_dict)
+    #     else:
+    #         # For new models with custom layers
+    #         super().load_state_dict(state_dict) 
+    def reset_states(self):
+        """Reset states for layers with state management."""
+        if hasattr(self, "layers"):
+            for layer in self.layers:
+                if hasattr(layer, "reset_state"):
+                    layer.reset_state()
+    
+class RD_SNNModel(BaseSNNModel):
+    def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, num_layers=4):
+        super().__init__(num_inputs, num_hidden, num_outputs, tresholdLIF, device)
+        self.betaLIF = betaLIF
+
         spike_grad = surrogate.fast_sigmoid()
+        self.layers = nn.ModuleList()
 
-        # Define the SNN
-        self.net = nn.Sequential(
-            # 16 inp to 256 neurons
-            nn.Linear(self.num_inputs, self.num_hidden),
-            snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF),
-            # 256 neurons to 256 neurons
-            nn.Linear(self.num_hidden, self.num_hidden),
-            snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF),
-            # 256 neurons to 256 neurons
-            nn.Linear(self.num_hidden, self.num_hidden),
-            snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF),
-            # 256 neurons to 35 outputs
-            nn.Linear(self.num_hidden, self.num_outputs),
-            snn.Leaky(beta=self.betaLIF, spike_grad=spike_grad, init_hidden=True, threshold=self.tresholdLIF, output=True)
-        ).to(self.device)
+        self.layers.append(nn.Linear(num_inputs, num_hidden).to(device))
+        self.layers.append(snn.Leaky(beta=betaLIF, spike_grad=spike_grad, init_hidden=False, threshold=tresholdLIF).to(device))
+
+        for _ in range(num_layers - 1):
+            self.layers.append(nn.Linear(num_hidden, num_hidden).to(device))
+            self.layers.append(snn.Leaky(beta=betaLIF, spike_grad=spike_grad, init_hidden=False, threshold=tresholdLIF).to(device))
+
+        self.layers.append(nn.Linear(num_hidden, num_outputs).to(device))
+        self.layers.append(snn.Leaky(beta=betaLIF, spike_grad=spike_grad, init_hidden=False, threshold=tresholdLIF, output=True).to(device))
+        
+        # Move model to the correct device
+        # self.to(self.device)
 
     def forward(self, data, timestep):
+        data = data.to(self.device)  # Ensure data is on the correct device
         spk_rec = []
-        utils.reset(self.net)  # Resets hidden states for all LIF neurons in the network
-        # print(f"data shape{data.shape}")
+        # mem = [None] * (len(self.layers) // 2)
+        # Initialize Membrane States at Each Forward Pass
+        mem = [layer.init_leaky() for layer in self.layers if isinstance(layer, snn.Leaky)]
+
         for step in range(timestep):
-            spk_out, _ = self.net(data[step])  # Forward pass for one time step
-            spk_rec.append(spk_out)
+            x = data[step]
+            for idx in range(0, len(self.layers), 2):
+                x = self.layers[idx](x)
+                x, mem[idx//2] = self.layers[idx+1](x, mem[idx//2])
 
-        return torch.stack(spk_rec)  # Shape: [timestep, batch_size, output_size]
-    
-    # Optional: Visualization Utility (Specific to this model)    
-    
-# Optional: Visualization Utility (Specific to this model)
-import matplotlib.pyplot as plt
-import numpy as np
+            # Detach after each timestep to prevent graph buildup
+            spk_rec.append(x)
 
-class DynamicSNNModel():
+        return torch.stack(spk_rec)
+    
+import torch
+import torch.nn as nn
+import snntorch as snn
+
+class RD_SNNModel_Synaptic(BaseSNNModel):
+    def __init__(self, num_inputs, num_hidden, num_outputs, tresholdLIF, device, num_layers=4, alpha=0.7, betaLIF=0.7):
+        super().__init__(num_inputs, num_hidden, num_outputs, tresholdLIF, device)
+
+        spike_grad = snn.surrogate.fast_sigmoid()
+
+        # Use ModuleList to register layers
+        self.layers = nn.ModuleList()
+        self.layers.append(nn.Linear(num_inputs, num_hidden))
+        self.layers.append(snn.Synaptic(alpha=alpha, beta=betaLIF, spike_grad=spike_grad, threshold=tresholdLIF))
+
+        for _ in range(num_layers - 1):
+            self.layers.append(nn.Linear(num_hidden, num_hidden))
+            self.layers.append(snn.Synaptic(alpha=alpha, beta=betaLIF, spike_grad=spike_grad, threshold=tresholdLIF))
+
+        self.layers.append(nn.Linear(num_hidden, num_outputs))
+        self.layers.append(snn.Synaptic(alpha=alpha, beta=betaLIF, spike_grad=spike_grad, threshold=tresholdLIF, output=True))
+        self.to(self.device)
+    def forward(self, data, timestep):
+        spk_rec = []
+        # Initialize synaptic and membrane states correctly
+        syn, mem = zip(*[layer.reset_mem() if isinstance(layer, snn.Synaptic) else (None, None) for layer in self.layers])
+        syn, mem = list(syn), list(mem)
+
+
+        for step in range(timestep):
+            x = data[step]
+            for idx in range(0, len(self.layers), 2):
+                x = self.layers[idx](x)  # Corresponds to cur1 = self.fc1(x)
+                x, syn[idx // 2], mem[idx // 2] = self.layers[idx + 1](x, syn[idx // 2], mem[idx // 2])  # spk1, syn1, mem1 = self.lif1(cur1, syn1, mem1)
+            spk_rec.append(x)  # Collects spike output from the final layer
+
+        return torch.stack(spk_rec)
+
+    # def forward(self, data, timestep):
+    #     spk_rec = []
+    #     # syn = [None] * (len(self.layers) // 2)
+    #     # mem = [None] * (len(self.layers) // 2)
+    #     # Initialize synaptic and membrane states
+    #     syn = [layer.reset_mem() if isinstance(layer, snn.Synaptic) else None for layer in self.layers]
+    #     mem = [layer.reset_mem() if isinstance(layer, snn.Synaptic) else None for layer in self.layers]
+        
+        
+    #     # def reset_mem(self):
+    #     #     self.syn = torch.zeros_like(self.syn, device=self.syn.device)
+    #     #     self.mem = torch.zeros_like(self.mem, device=self.mem.device)
+    #     #     return self.syn, self.mem
+
+    #     # for step in range(timestep):
+    #     #     x = data[step]
+    #     #     for idx in range(0, len(self.layers), 2):
+    #     #         x = self.layers[idx](x)
+    #     #         # spk1, syn1, mem1 = self.lif1(cur1, syn1, mem1)
+    #     #         x, syn[idx // 2], mem[idx // 2] = self.layers[idx + 1](x, syn[idx // 2], mem[idx // 2])
+    #     #     spk_rec.append(x)
+
+    #     # return torch.stack(spk_rec)
+        
+    #     for step in range(timestep):
+    #         x = data[step]
+    #         for idx in range(0, len(self.layers), 2):
+    #             x = self.layers[idx](x)
+    #             if isinstance(self.layers[idx+1], snn.Synaptic):
+    #                 x, syn[idx // 2], mem[idx // 2] = self.layers[idx + 1](x, syn[idx // 2], mem[idx // 2])
+    #         spk_rec.append(x)
+
+    #     return torch.stack(spk_rec)        
+
+
+
+
+# old not real dynamic assumed
+class DynamicSNNModel(BaseSNNModel):
     def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, num_layers=4):
-        self.num_inputs = num_inputs
-        self.num_hidden = num_hidden
-        self.num_outputs = num_outputs
+        super().__init__(num_inputs, num_hidden, num_outputs, tresholdLIF, device)
         self.betaLIF = betaLIF
-        self.tresholdLIF = tresholdLIF
-        self.device = device
-        # self.learning_rate = learning_rate
 
         # Surrogate gradient for spiking neuron
         spike_grad = surrogate.fast_sigmoid()
@@ -379,6 +551,170 @@ class DynamicSNNModel():
             spk_rec.append(spk_out)
 
         return torch.stack(spk_rec)  # Shape: [timestep, batch_size, output_size]
+
+
+# class RD_SNNModel_Synaptic(BaseSNNModel):
+#     def __init__(self, num_inputs, num_hidden, num_outputs, tresholdLIF, device, num_layers=4, alpha=0.9, betaLIF=0.5):
+#         super().__init__(num_inputs, num_hidden, num_outputs, tresholdLIF, device)
+#         self.device = device
+#         spike_grad = snn.surrogate.fast_sigmoid()
+
+#         layers = []
+#         layers.append(nn.Linear(num_inputs, num_hidden))
+#         layers.append(snn.Synaptic(alpha=alpha, beta=betaLIF, spike_grad=spike_grad, threshold=tresholdLIF))
+
+#         for _ in range(num_layers - 1):
+#             layers.append(nn.Linear(num_hidden, num_hidden))
+#             layers.append(snn.Synaptic(alpha=alpha, beta=betaLIF, spike_grad=spike_grad, threshold=tresholdLIF))
+
+#         layers.append(nn.Linear(num_hidden, num_outputs))
+#         layers.append(snn.Synaptic(alpha=alpha, beta=betaLIF, spike_grad=spike_grad, threshold=tresholdLIF, output=True))
+
+#         # self.net = nn.Sequential(*layers).to(device)
+
+#     def forward(self, data, timestep):
+#         spk_rec = []
+#         syn = [None] * (len(self.net) // 2)
+#         mem = [None] * (len(self.net) // 2)
+
+#         for step in range(timestep):
+#             x = data[step]
+#             for idx in range(0, len(self.net), 2):
+#                 x = self.net[idx](x)
+#                 x, syn[idx // 2], mem[idx // 2] = self.net[idx + 1](x, syn[idx // 2], mem[idx // 2])
+#             spk_rec.append(x)
+
+#         return torch.stack(spk_rec)
+
+
+# class DynamicSNNModel_Synaptic():
+#     def __init__(self, num_inputs, num_hidden, num_outputs, tresholdLIF, device, num_layers=4, alpha=0.9, betaLIF=0.5):
+#         self.num_inputs = num_inputs
+#         self.num_hidden = num_hidden
+#         self.num_outputs = num_outputs
+#         self.alpha = alpha
+#         self.betaLIF = betaLIF
+#         self.tresholdLIF = tresholdLIF
+#         self.device = device
+
+#         # Surrogate gradient for spiking neuron
+#         spike_grad = surrogate.fast_sigmoid()
+        
+#         layers = []
+        
+#         # Input layer
+#         layers.append(nn.Linear(num_inputs, num_hidden))
+#         layers.append(snn.Synaptic(alpha=self.alpha, beta=self.betaLIF, spike_grad=spike_grad, threshold=self.tresholdLIF))
+
+#         # Hidden layers
+#         for _ in range(num_layers - 1):
+#             layers.append(nn.Linear(num_hidden, num_hidden))
+#             layers.append(snn.Synaptic(alpha=self.alpha, beta=self.betaLIF, spike_grad=spike_grad, threshold=self.tresholdLIF))
+
+#         # Output layer
+#         layers.append(nn.Linear(num_hidden, num_outputs))
+#         layers.append(snn.Synaptic(alpha=self.alpha, beta=self.betaLIF, spike_grad=spike_grad, threshold=self.tresholdLIF, output=True))
+
+#         self.net = nn.Sequential(*layers).to(device)
+
+#     def forward(self, data, timestep):
+#         spk_rec = []
+#         utils.reset(self.net)  # Resets all internal states for Synaptic neurons
+        
+#         first_layer = list(self.net.children())[0]
+        
+#         print("print the net",self.net)
+        
+#         for step in range(timestep):
+#             print(f"data[step] type: {type(data[step])}, shape: {data[step].shape}")
+#             print(f"First Layer Type: {type(first_layer)}, Output: {first_layer(data[step])}")
+#             spk_out, *_ = self.net(data[step])  # Forward pass for one time step
+#             spk_rec.append(spk_out)
+
+#         return torch.stack(spk_rec)  # Shape: [timestep, batch_size, output_size]
+
+
+# class DynamicSNNModel_Synaptic():
+#     def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, num_layers=4, alpha=0.9):
+#         self.num_inputs = num_inputs
+#         self.num_hidden = num_hidden
+#         self.num_outputs = num_outputs
+#         self.alpha = alpha  # Synaptic current decay rate
+#         self.betaLIF = betaLIF
+#         self.tresholdLIF = tresholdLIF
+#         self.device = device
+
+#         # Surrogate gradient for spiking neuron
+#         spike_grad = surrogate.fast_sigmoid()
+
+#         layers = []
+
+#         # Input layer with Synaptic neurons (no alpha or beta)
+#         layers.append(nn.Linear(num_inputs, num_hidden))
+#         layers.append(snn.Synaptic(alpha=self.alpha, beta=self.betaLIF,  spike_grad=spike_grad, threshold=tresholdLIF))
+
+#         # Hidden layers with Synaptic neurons
+#         for _ in range(num_layers - 1):
+#             layers.append(nn.Linear(num_hidden, num_hidden))
+#             layers.append(snn.Synaptic(alpha=self.alpha, beta=self.betaLIF, spike_grad=spike_grad, threshold=tresholdLIF))
+
+#         # Output layer with Synaptic neurons
+#         layers.append(nn.Linear(num_hidden, num_outputs))
+#         layers.append(snn.Synaptic(alpha=self.alpha, beta=self.betaLIF, spike_grad=spike_grad, threshold=tresholdLIF, output=True))
+
+#         self.net = nn.Sequential(*layers).to(device)
+
+#     def forward(self, data, timestep):
+#         spk_rec = []
+#         utils.reset(self.net)
+        
+#         for step in range(timestep):
+#             # Pass data through the network, which includes synaptic current and membrane potential
+#             spk_out, syn, mem = self.net(data[step], syn, mem)  # Forward pass for one timestep
+#             spk_rec.append(spk_out)
+
+#         return torch.stack(spk_rec)  # Shape: [timestep, batch_size, output_size]
+
+
+# class DynamicSNNModel_Synaptic():
+#     def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, num_layers=4, alpha=0.9, beta=0.5):
+#         self.num_inputs = num_inputs
+#         self.num_hidden = num_hidden
+#         self.num_outputs = num_outputs
+#         self.betaLIF = betaLIF
+#         self.tresholdLIF = tresholdLIF
+#         self.device = device
+
+#         # Surrogate gradient for spiking neuron
+#         spike_grad = surrogate.fast_sigmoid()
+        
+#         layers = []
+        
+#         # Input layer
+#         layers.append(nn.Linear(num_inputs, num_hidden))
+        
+#         layers.append(snn.Synaptic(alpha=alpha, beta=beta, spike_grad=spike_grad, init_hidden=True, threshold=tresholdLIF))
+
+#         # Hidden layers
+#         for _ in range(num_layers - 1):
+#             layers.append(nn.Linear(num_hidden, num_hidden))
+#             layers.append(snn.Synaptic(alpha=alpha, beta=beta, spike_grad=spike_grad, init_hidden=True, threshold=tresholdLIF))
+
+#         # Output layer
+#         layers.append(nn.Linear(num_hidden, num_outputs))
+#         layers.append(snn.Synaptic(alpha=alpha, beta=beta, spike_grad=spike_grad, init_hidden=True, threshold=tresholdLIF, output=True))
+
+#         self.net = nn.Sequential(*layers).to(device)
+
+#     def forward(self, data, timestep):
+#         spk_rec = []
+#         utils.reset(self.net)  # Resets hidden states for all LIF neurons in the network
+#         # print(f"data shape{data.shape}")
+#         for step in range(timestep):
+#             spk_out, _ = self.net(data[step])  # Forward pass for one time step
+#             spk_rec.append(spk_out)
+
+#         return torch.stack(spk_rec)  # Shape: [timestep, batch_size, output_size]    
 
 def plot_pipeline(tensor):
     """

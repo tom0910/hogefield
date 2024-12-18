@@ -121,11 +121,6 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     file_slider_label = ttk.Label(widget_frame, text='File Index:')
     file_slider = tk.Scale(widget_frame, from_=0, to=len(audio_sample.get_files()) - 1, orient='horizontal')
 
-    # FFT Size Entry
-    # n_fft_label = ttk.Label(widget_frame, text='n_fft:')
-    # n_fft_input = ttk.Entry(widget_frame)
-    # n_fft_input.insert(0, int(config.DEFAULT_N_FFT))
-
     n_fft_var = tk.IntVar(value=config.DEFAULT_N_FFT)
     n_fft_label = ttk.Label(widget_frame, text='n_fft:')
     n_fft_slider = tk.Scale(widget_frame, from_=1, to=1024, orient='horizontal', variable=n_fft_var)
@@ -140,7 +135,7 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     # Number of Mel Bands Slider    
     n_mels_var = tk.IntVar(value=config.DEFAULT_N_MELS)
     n_mels_label = ttk.Label(widget_frame, text='n_mels:')
-    n_mels_slider = tk.Scale(widget_frame, from_=1, to=22, orient='horizontal', variable=n_mels_var)
+    n_mels_slider = tk.Scale(widget_frame, from_=1, to=88, orient='horizontal', variable=n_mels_var)
     n_mels_entry = ttk.Entry(widget_frame, textvariable=n_mels_var, width=5)    
 
 
@@ -166,7 +161,8 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
         variable=filter_choice_var,
         label_text="Select Mode:",
         options=[("standard", config.FILTER_VALUE1), ("custom", config.FILTER_VALUE2), ("narrowband", config.FILTER_VALUE3)]
-    )    
+    )
+
     
     mel_filter_plot_var = tk.StringVar(value=config.DEFAULT_FILTER_SPCTRGRM_PLT_CHOICE)
     mel_filter_plot_radio_widget = ChoiceWidget(

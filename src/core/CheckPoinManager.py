@@ -1,5 +1,5 @@
 import torch
-from core.Model import SNNModel, SNNModel_population, SNNModel_droput, DynamicSNNModel
+from core.Model import SNNModel, SNNModel_population, SNNModel_droput, DynamicSNNModel, RD_SNNModel, RD_SNNModel_Synaptic
 
 
 class CheckpointManager:
@@ -31,7 +31,8 @@ class CheckpointManager:
         """
         checkpoint = {
             "model_type": type(self.model).__name__,  # Save model type fro v1.1 handling new models
-            "model_state_dict": self.model.net.state_dict() if self.model else None,
+            # "model_state_dict": self.model.net.state_dict() if self.model else None,
+            "model_state_dict": self.model.get_net().state_dict() if self.model else None,
             "optimizer_state_dict": self.optimizer.state_dict() if self.optimizer else None,
             "optimizer_type": self.optimizer_type,
             "optimizer_params": self.optimizer_params,
@@ -50,7 +51,9 @@ class CheckpointManager:
         "SNNModel": SNNModel,
         "SNNModel_population": SNNModel_population,
         "SNNModel_droput": SNNModel_droput,
-        "DynamicSNNModel" : DynamicSNNModel
+        "DynamicSNNModel" : DynamicSNNModel,
+        "RD_SNNModel": RD_SNNModel,
+        "RD_SNNModel_Synaptic": RD_SNNModel_Synaptic
         
     }
     
@@ -73,14 +76,17 @@ class CheckpointManager:
                 tresholdLIF=hyperparameters.get("threshold_lif"),
                 device=hyperparameters.get("device"),
             )
-            model.net.load_state_dict(checkpoint["model_state_dict"])
+            # model.net.load_state_dict(checkpoint["model_state_dict"])
+            model.load_state_dict(checkpoint["model_state_dict"])
+
         else:
             raise ValueError(f"Unknown model type: {model_type}")
 
         # Initialize optimizer
         optimizer = None
         optimizer_type = checkpoint.get("optimizer_type")
-        optimizer_params = checkpoint.get("optimizer_params", {})
+        learning_rate = hyperparameters["learning_rate"]
+        optimizer_params = checkpoint.get("optimizer_params", {"lr": learning_rate})
         if "optimizer_state_dict" in checkpoint and model:
             optimizer_map = {
                 "Adam": torch.optim.Adam,
@@ -88,7 +94,9 @@ class CheckpointManager:
                 "RMSprop": torch.optim.RMSprop,
             }
             optimizer_class = optimizer_map.get(optimizer_type, torch.optim.Adam)
-            optimizer = optimizer_class(model.net.parameters(), **optimizer_params)
+            # optimizer = optimizer_class(model.net.parameters(), **optimizer_params)
+            optimizer = optimizer_class(model.get_parameters(), **optimizer_params)
+
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
         # Extract additional data
@@ -126,7 +134,9 @@ class CheckpointManager:
 
         # Load model state if available
         if "model_state_dict" in checkpoint and model:
-            model.net.load_state_dict(checkpoint["model_state_dict"])
+            # model.net.load_state_dict(checkpoint["model_state_dict"])
+            model.load_state_dict(checkpoint["model_state_dict"])
+
 
         # Load optimizer state if available
         if "optimizer_state_dict" in checkpoint and optimizer:
@@ -144,9 +154,11 @@ class CheckpointManager:
         # incorrect_rate = checkpoint.get("incorrect_rate",0)
         correct_rate    = hyperparameters["correct_rate"]
         incorrect_rate  = hyperparameters["incorrect_rate"]
+        # learning_rate = hyperparameters["learning_rate"]
 
         # Handle optimizer type and params
         optimizer_type = checkpoint.get("optimizer_type")
+        # optimizer_params = {learning_rate} #but should be loaded straight 
         optimizer_params = checkpoint.get("optimizer_params", {})
 
         # Dynamically create optimizer if none exists
@@ -157,7 +169,9 @@ class CheckpointManager:
                 "RMSprop": torch.optim.RMSprop,
             }
             optimizer_class = optimizer_map.get(optimizer_type, torch.optim.Adam)
-            optimizer = optimizer_class(model.net.parameters(), **optimizer_params)
+            # optimizer = optimizer_class(model.net.parameters(), **optimizer_params)
+            optimizer = optimizer_class(model.get_parameters(), **optimizer_params)
+
 
         # Create and return a new CheckpointManager instance
         manager = CheckpointManager(
@@ -175,6 +189,105 @@ class CheckpointManager:
 
         return manager
 
+    def update_optimizer_lr(self, new_lr):
+        """
+        Update the optimizer's learning rate dynamically.
+
+        Args:
+            new_lr (float): New learning rate to update the optimizer with.
+        """
+        if self.optimizer:
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] = new_lr
+            self.optimizer_params["lr"] = new_lr
+            print(f"Learning rate updated to {new_lr}")
+        else:
+            print("Optimizer not initialized. Cannot update learning rate.")
+
+    # def initialize_optimizer(self):
+    #     """
+    #     Initialize the optimizer based on stored hyperparameters and optimizer type.
+    #     """
+    #     if not self.model:
+    #         raise ValueError("Model is not initialized. Cannot create optimizer.")
+
+    #     optimizer_map = {
+    #         "Adam": torch.optim.Adam,
+    #         "SGD": torch.optim.SGD,
+    #         "RMSprop": torch.optim.RMSprop,
+    #     }
+    #     optimizer_class = optimizer_map.get(self.optimizer_type, torch.optim.Adam)
+
+    #     # Default to learning rate from hyperparameters
+    #     lr = self.hyperparameters.get("learning_rate", 0.001)
+    #     self.optimizer_params["lr"] = lr  # Ensure consistency
+
+    #     # Create the optimizer
+    #     self.optimizer = optimizer_class(self.model.get_parameters(), **self.optimizer_params)
+    #     print(f"Initialized {self.optimizer_type} optimizer with lr={lr}")
+        
+    # usage the above
+    # Load checkpoint
+    # manager = CheckpointManager.load_checkpoint_with_defaults_v1_1(file_path="model_checkpoint.pth")
+
+    # # Initialize optimizer
+    # manager.initialize_optimizer()
+
+    # # Update learning rate dynamically
+    # new_learning_rate = 0.0005
+    # manager.update_optimizer_lr(new_learning_rate)
+    
+    def update_beta_lif(self, new_beta_lif):
+        """
+        Update the betaLIF value in both the model and hyperparameters.
+        """
+        if "beta_lif" in self.hyperparameters:
+            self.hyperparameters["beta_lif"] = new_beta_lif
+        
+        if hasattr(self.model, "betaLIF"):
+            self.model.betaLIF = new_beta_lif
+            print(f"Updated betaLIF to: {new_beta_lif}")
+            
+    def update_threshold_lif(self, new_threshold_lif):
+        """
+        Update the thresholdLIF value in the model and its hyperparameters.
+        
+        Args:
+            new_threshold_lif (float): The new thresholdLIF value to set.
+        """
+        if hasattr(self.model, 'tresholdLIF'):
+            self.model.tresholdLIF = new_threshold_lif
+            self.hyperparameters["threshold_lif"] = new_threshold_lif
+            print(f"Updated thresholdLIF to {new_threshold_lif}")
+        else:
+            raise AttributeError("Model does not have the attribute 'tresholdLIF'.")
+                
+    
+    def load_and_initialize_with_lr_update(cls, file_path, new_learning_rate):
+        """
+        Load checkpoint, initialize optimizer, and update learning rate dynamically.
+
+        Args:
+            file_path (str): Path to the checkpoint file.
+            new_learning_rate (float): The new learning rate to set.
+            
+        Returns:
+            CheckpointManager: An initialized instance with updated learning rate.
+        """
+        
+        manager = cls.load_checkpoint_with_defaults_v1_1(file_path)
+
+        # Initialize optimizer if not already done
+        if manager.optimizer is None:
+            manager.initialize_optimizer()
+
+        # Update learning rate
+        manager.update_optimizer_lr(new_learning_rate)
+
+        return manager
+    
+
+    
     def initialize_model_and_optimizer(self):
         """
         Initialize the model and optimizer using stored hyperparameters and optimizer settings.
@@ -243,6 +356,9 @@ class CheckpointManager:
         if len(filename_parts) > 1 and filename_parts[-1].isdigit():
             return int(filename_parts[-1])
         return 0
+    def get_parameters_state_dict(self):
+        return self.state_dict()
+
 
     def print_contents(self):
         """

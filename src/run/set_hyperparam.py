@@ -47,7 +47,7 @@ HYPERPARAMETERS = [
     ("Device", config.DEVICE, tk.StringVar),
     ("Learning Rate", config.LEARNING_RATE, tk.DoubleVar),
     ("Filter Type", "custom", tk.StringVar, ["custom", "standard", "narrowband"]),
-    ("Model Type", "SNNModel", tk.StringVar, ["SNNModel", "SNNModel_population", "SNNModel_droput", "DynamicSNNModel"]),  # New entry for v1.1
+    ("Model Type", "SNNModel", tk.StringVar, ["SNNModel", "SNNModel_population", "SNNModel_droput", "DynamicSNNModel", "RD_SNNModel", "RD_SNNModel_Synaptic"]),  # New entry for v1.1
     ("Correct Rate", 1, tk.DoubleVar),  
     ("Incorrect Rate", 0, tk.DoubleVar),  
 ]
@@ -297,9 +297,13 @@ def create_and_save_model_v1_1(h_params, model_path):
         model_class = CheckpointManager.MODEL_REGISTRY[model_type]
         model = model_class(**translated_params)
 
-        # Create optimizer
-        optimizer = torch.optim.Adam(model.net.parameters(), lr=h_params.get("learning_rate", None))
-
+        # Create optimizer #####
+        # optimizer = torch.optim.Adam(model.net.parameters(), lr=h_params.get("learning_rate", None))
+        learning_rate = h_params.get("learning_rate", None) 
+        # optimizer = torch.optim.Adam(model.get_parameters(), lr=h_params.get("learning_rate", None))
+        optimizer = torch.optim.Adam(model.get_parameters(), lr=learning_rate)
+        
+                                     
         # Initialize the CheckpointManager
         manager = CheckpointManager(model=model, optimizer=optimizer, hyperparameters=h_params)
 
@@ -398,6 +402,9 @@ class WidgetManager:
             
             # Initialize Filter Type logic if applicable
             self.init_filter_logic()
+        
+        # Initialize hide widgets logic
+        self.init_hide_logic()
 
     def get_widget_by_label(self, label):
         """
@@ -479,48 +486,24 @@ class WidgetManager:
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}") 
     
-    # might need change, working but now with checkpoint manager             
-    # def load_from_pth(self, file_path):
-    #     """
-    #     Load and set widget values from a .pth file.
-
-    #     Parameters:
-    #         file_path (str): Path to the .pth file.
-    #     """
-    #     try:
-    #         # Load the .pth file
-    #         checkpoint = torch.load(file_path)
-
-    #         # Extract hyperparameters or other data
-    #         data = checkpoint.get("hyperparameters", {})
-
-    #         if not data:
-    #             messagebox.showerror("Error", "No hyperparameters found in the .pth file.")
-    #             return
-
-    #         # Map the .pth file data to widget values
-    #         for label, widget in self.widgets:
-    #             standardized_key = self.standardize_key(label)
-    #             if standardized_key in data:
-    #                 widget.set(data[standardized_key])  # Set value from .pth
-    #             else:
-    #                 print(f"Warning: Key '{standardized_key}' not found in .pth file.")
-            
-    #         global last_file_path
-    #         last_file_path = file_path
-    #         messagebox.showinfo("Success", f"Parameters loaded from {file_path}")
-
-    #     except FileNotFoundError:
-    #         messagebox.showerror("Error", f"File not found: {file_path}")
-    #     except RuntimeError as e:
-    #         messagebox.showerror("Error", f"Failed to load .pth file: {e}")
-    #     except Exception as e:
-    #         messagebox.showerror("Error", f"An error occurred: {e}")
-            
+    def init_hide_logic(self):
+        for label, widget in self.widgets:
+            if label in ["N Mels", "Number of Inputs", "F Min", "F Max", "SF Threshold", "Hop Length", "N FFT", "Wav File Samples", "Timestep Calculated", "Number of Hidden Neurons", "Number of Outputs", "Filter Type", "Model Type","Correct Rate", "Incorrect Rate"]:
+                widget.entry.config(state="normal")     
+    
+    def hide_params_tick(self,tick_var_val):
+        for label, widget in self.widgets:
+            if tick_var_val and label in ["N Mels", "Number of Inputs", "F Min", "F Max", "SF Threshold", "Hop Length", "N FFT", "Wav File Samples", "Timestep Calculated", "Number of Hidden Neurons", "Number of Outputs", "Filter Type", "Model Type","Correct Rate", "Incorrect Rate"]:
+                widget.entry.config(state="disabled")
+            else:
+                widget.entry.config(state="normal")   
+                       
+         
     def modify_and_save_pth(self):
         """
         Modify hyperparameters of a .pth file and save the updated file.
         """
+
         # Ask the user to select a .pth file
         pth_file_path = filedialog.askopenfilename(
             initialdir=DEFAULT_DIR,
@@ -531,6 +514,8 @@ class WidgetManager:
             messagebox.showwarning("No File Selected", "Please select a valid .pth file.")
             return
 
+        # hide values that are not or hyp. parms. sweep
+        # self.hide_params_tick(True)
         try:
             # Load the checkpoint manager
             checkpoint_manager = CheckpointManager.load_checkpoint_with_defaults_v1_1(pth_file_path)
@@ -542,12 +527,33 @@ class WidgetManager:
                 standardized_key = self.standardize_key(label)
                 if standardized_key in hyperparameters:
                     widget.set(hyperparameters[standardized_key])
-
+            self.hide_params_tick(True)
             # Callback for saving changes
             def save_changes():
-                updated_hyperparameters = self.get_hyperparameters()
-                checkpoint_manager.set_hyperparameters(updated_hyperparameters)
+  
+                try:
+                    # get the hyperparameters from widget and update the manager to be saved
+                    updated_hyperparameters = self.get_hyperparameters()
+                    checkpoint_manager.set_hyperparameters(updated_hyperparameters)
+                    # set new learning rate
+                    new_learning_rate = checkpoint_manager.hyperparameters.get("learning_rate")
+                    checkpoint_manager.update_optimizer_lr(new_learning_rate)
 
+                except Exception as e:
+                    messagebox.showerror("Error",f"failed to create model: {e}")
+                    print(f"Error in create_and_save_model: {e}") 
+                                 
+                try:
+                    # Update model attributes directly
+                    new_betaLIF = checkpoint_manager.hyperparameters.get("beta_lif")
+                    new_thresholdLIF = checkpoint_manager.hyperparameters.get("threshold_lif")
+                    checkpoint_manager.model.betaLIF = new_betaLIF
+                    checkpoint_manager.model.tresholdLIF = new_thresholdLIF
+
+                    
+                except AttributeError as e:
+                    messagebox.showerror("Error", f"Failed to update model attributes: {e}")                   
+                
                 # Ask for save location
                 output_file_path = filedialog.asksaveasfilename(
                     initialdir=DEFAULT_DIR,
@@ -562,7 +568,7 @@ class WidgetManager:
                 # Save the updated checkpoint
                 checkpoint_manager.save(output_file_path)
                 messagebox.showinfo("Success", f"Updated checkpoint saved to: {output_file_path}")
-
+                # end of save function
             # Add Save Changes button
             save_button = tk.Button(self.frame, text="Save Changes", command=save_changes)
             save_button.grid(row=len(self.widgets) + 1, column=0, columnspan=2, pady=10)
@@ -771,6 +777,12 @@ if __name__ == "__main__":
     # batch_size_widget = manager.get_widget_by_label("Batch Size")
     # if batch_size_widget:
     #     print(f"Batch Size: {batch_size_widget.get()}")
+    
+    # Create the checkbox
+    tick_var = tk.BooleanVar(value=False)
+    tick_box = ttk.Checkbutton(root, text="hide sweep const.", variable=tick_var, command=lambda:manager.hide_params_tick(tick_var.get())).grid(
+        row=15, column=0, padx=10, pady=5
+    )
 
     ttk.Button(root, text="Save As (.json)", command=lambda: save_parameters_to_file(manager.get_hyperparameters(), manager.get_value_by_label("Model ID") )).grid(
         row=2, column=0, padx=10, pady=5
@@ -798,13 +810,9 @@ if __name__ == "__main__":
         row=9, column=0, padx=10, pady=5
     )
     
-    ttk.Button(root, text="Modify and Save (.pth)", command=manager.modify_and_save_pth).grid(
+    ttk.Button(root, text="Modify and Save (.pth)", command=lambda: (tick_var.set(True),manager.modify_and_save_pth())).grid(
         row=13, column=0, padx=10, pady=5
     )
-
-    # ttk.Button(root, text="Train", command=lambda: run_train_app(pth_saved_dir, pth_save_path, DEFAULT_DIR)).grid(
-    #     row=14, column=0, padx=10, pady=5
-    # )
     
     ttk.Button(root, text="Train", command=lambda: run_train_app(pth_saved_dir, DEFAULT_DIR, pth_save_path)).grid(
     row=14, column=0, padx=10, pady=5   

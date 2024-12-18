@@ -132,8 +132,10 @@ def train_as_hypp_change(
     acc_hist = checkpoint_mngr.acc_hist
     test_acc_hist =checkpoint_mngr.test_acc_hist
         
-    net = checkpoint_mngr.model.net
+    # net = checkpoint_mngr.model.net #This does not work with RD_<class models>
     model = checkpoint_mngr.model
+    # for new Dynamics model:
+    # model = checkpoint_mngr.model
     optimizer = checkpoint_mngr.optimizer
     
     # CheckpointManager.get_hyperparameters
@@ -167,12 +169,23 @@ def train_as_hypp_change(
             data, targets, *_ = batch
             # inspect_batch(data)
             data = data
-        
+
             data = data.permute(3, 0, 2, 1).squeeze()
             data, targets = data.to(device), targets.to(device)
+            # print(f"data and targets are on the same {device}")
 
+
+            # for debugging:
+            # print(f"model name {type(model)} starts training here")
             # Training step
-            net.train()
+            # for new Dynamics model:            
+            model.train()
+            # print(f"{type(model)} in training mode for backprop")
+            
+            optimizer.zero_grad()
+            # net.train() # this is for old model classes
+            # for new Dynamics model:
+            # spk_rec = model.forward(data, timestep)
             spk_rec = model.forward(data, timestep)
             
             # Monitor spiking metrics
@@ -222,9 +235,11 @@ def train_as_hypp_change(
             # print(f"Sparsity (percentage of active neurons): {sparsity.mean().item() * 100:.2f}%")
 
             loss_val = loss_fn(spk_rec, targets)
+            if loss_val.grad_fn is None:
+                print(f"Warning: {type(model)} loss_val has no grad_fn, backward skipped")
 
-
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
+            # optimizer.zero_grad(set_to_none=True)
             loss_val.backward()
             optimizer.step()
 
@@ -249,11 +264,20 @@ def train_as_hypp_change(
 
             if counter % len(train_loader) == 0:
                 with torch.no_grad():
-                    model.net.eval()
-                    test_acc = FT.batch_accuracy(loader=test_loader, net=model.net, timestep=timestep, device=device)
+
+                    # for new Dynamics model:
+                    # print(f"model name {type(model)} starts eval here")
+                    # model.net.eval()  #ver 1 code changed to:
+                    model.get_net().eval()
+                    # test_acc = FT.batch_accuracy(loader=test_loader, net=model.net, timestep=timestep, device=device)
+                    test_acc = FT.batch_accuracy(loader=test_loader, net=model, timestep=timestep, device=device)
                     print(f"Iteration {counter}, Test Acc: {test_acc * 100:.2f}%\n")
                     test_acc_hist.append(test_acc.item())
                     checkpoint_mngr.test_acc_hist = test_acc_hist
+                    
+            # Return to training mode
+            model.train()
+            # print(f"{type(model)} switched back to train mode")
             
             counter += 1
 
