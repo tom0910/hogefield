@@ -28,6 +28,7 @@ import utils.training_functional as TF
 import utils.data_transfer_util as dt_util
 
 import threading
+import scipy.io
 
 if __name__ == "__main__":
     
@@ -92,8 +93,27 @@ if __name__ == "__main__":
         spk_freq_label,
         hop_length_entry, n_mels_entry,
         save_button_widget,
-        filename_entry      
+        filename_entry,
+        save_matdata_widget      
     ) = create_widgets(audio_sample, mel_config, spikes_data, widget_frame)
+    
+    collected_data_for_matlab = {}
+
+# def fu():
+#     global collected_data
+#     a = [1, 2, 3]
+#     b = [4, 5, 6]
+#     collected_data.update({"a": a, "b": b})
+
+# def save_mat_variable():
+#     import scipy.io
+#     scipy.io.savemat("data.mat", collected_data)
+#     print("Saved to data.mat")
+
+# # Example use
+# fu()
+# save_mat_variable()
+
 
     # Observers for widget changes
     def update_plot():
@@ -104,7 +124,11 @@ if __name__ == "__main__":
         save_audio(audio_sample, file_name="original_waveform.wav", save_dir="src/run/SaveAudio")
         #plot waveform
         time, amplitude = xy_waveform_calc(audio_sample)
+        # Waveform plot
+        print(f"amplitude: type={type(amplitude)}, shape={getattr(amplitude, 'shape', 'N/A')}")
         plot_waveform(time, amplitude, canvases[0], axes[0])
+        collected_data_for_matlab.update({"time": time, "amplitude": amplitude, 
+            "label": audio_sample.selected_directory, "samples": audio_sample.sample_rate, "duration":audio_sample.audio_duration})
         # because of new audiosample, change mel spectrogram plot
         update_plot_mel()
         
@@ -124,6 +148,8 @@ if __name__ == "__main__":
         mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale = mel_spctgrm_calc(audio_sample, mel_config)
         #plot mel spectrogram
         plot_mel_spectrogram(mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale, canvases[1], axes[1])
+        #collectmatlab data:
+        collected_data_for_matlab.update({"mel_spectrogram":mel_spectrogram, "mel_time":mel_spectrogram.shape[-1]})
         #because of a new mel spectrogram, change spike train plot
         update_plot_spike()
 
@@ -142,6 +168,8 @@ if __name__ == "__main__":
             #plot:
             plot_spikes(spikes=spikes, num_neurons=num_neurons, num_spike_index=num_spike_index, canvas=canvases[2], ax=axes[2])
             print("spikes plotted")
+            # save data:
+            collected_data_for_matlab.update({"spikes":spikes, "num_neurons":num_neurons, "num_spike_index": num_spike_index})
         elif plot_choice == C.DEFAULT_DIST_PLT_PICK:
             #calculations:
             mel_spectrogram, _, _ = FU.get_mel_spectrogram(audio_sample, mel_config)
@@ -164,7 +192,9 @@ if __name__ == "__main__":
             title="Approximated Mel Spectrogram",
             canvas=canvases[4],
             ax = axes[4]
-        )    
+        ) 
+        #save data for matlab
+        collected_data_for_matlab.update({"mel_spectrogram_approx":mel_spectrogram_approx, "mel_approx_time":mel_spectrogram_approx.shape[-1]})   
         #calculation of audio waveform reconstruction:
         waveform_approx = FU.inverse_mel_to_waveform(mel_spectrogram=mel_spectrogram_approx, mel_config=mel_config , sample_rate=audio_sample.sample_rate)
         # Convert waveform to numpy if it's a torch.Tensor
@@ -176,6 +206,8 @@ if __name__ == "__main__":
         print("audio waveform data reconstructed")
         #plot waveform
         plot_waveform(time, waveform_approx, canvases[5], axes[5])
+        #save data for matlab:
+        collected_data_for_matlab.update({"waveform_approx":waveform_approx, "approx_time":time})
         # save audio file to listen
         save_audio(waveform=waveform_approx,sample_rate=mel_config.sample_rate, file_name="reconstructed_waveform.wav", save_dir="src/run/SaveAudio")
 
@@ -195,6 +227,7 @@ if __name__ == "__main__":
             f_min_slider.config(state=tk.NORMAL)
             f_max_slider.config(state=tk.NORMAL)
             n_mels_slider.config(state=tk.NORMAL)
+            n_mels_entry.config(state=tk.NORMAL)
         update_plot_mel()
         
     # Attach observers to widgets
@@ -268,7 +301,16 @@ if __name__ == "__main__":
         "wav_file_samples": audio_sample.sample_rate,
         "timestep": TF.calculate_num_frames(L=audio_sample.sample_rate, n_fft=mel_config.n_fft, hop_length=mel_config.hop_length, center=True, show=True)
     }
+    # "<Button-1>" in cmd below is the right click
     save_button_widget.bind("<Button-1>", lambda event: FU.on_click_save_params(params=get_params(spikes_data=spikes_data,mel_config=mel_config,audio_sample=audio_sample), ID=filename_entry.get()))
+    def on_click_save_to_mat_file():
+        # scipy.io.savemat("/project/results2/preprocessed_figures.mat", collected_data_for_matlab)
+        matlab_filepath=C.DEFAULT_MATLAB_DIRECTORY+"/preprocessed_figures.mat"
+        scipy.io.savemat(matlab_filepath, collected_data_for_matlab)
+        print("Saved to ", matlab_filepath)
+    
+    save_matdata_widget.bind("<Button-1>", lambda event: on_click_save_to_mat_file())
+
 
     import utils.data_transfer_util as dt_util
 

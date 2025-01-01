@@ -1,5 +1,5 @@
 import torch
-from core.Model import SNNModel, SNNModel_population, SNNModel_droput, DynamicSNNModel, RD_SNNModel, RD_SNNModel_Synaptic
+from core.Model import SNNModel, SNNModel_population, SNNModel_droput, DynamicSNNModel, RD_SNNModel, RD_SNNModel_Synaptic, RDL_SNNModel
 
 
 class CheckpointManager:
@@ -53,7 +53,8 @@ class CheckpointManager:
         "SNNModel_droput": SNNModel_droput,
         "DynamicSNNModel" : DynamicSNNModel,
         "RD_SNNModel": RD_SNNModel,
-        "RD_SNNModel_Synaptic": RD_SNNModel_Synaptic
+        "RD_SNNModel_Synaptic": RD_SNNModel_Synaptic,
+        "RDL_SNNModel": RDL_SNNModel
         
     }
     
@@ -237,6 +238,21 @@ class CheckpointManager:
     # new_learning_rate = 0.0005
     # manager.update_optimizer_lr(new_learning_rate)
     
+    def update_batch_size(self, new_batch_size):
+        """
+        Update the batch size in the hyperparameters.
+
+        Args:
+            new_batch_size (int): The new batch size to set.
+        """
+        if "batch_size" in self.hyperparameters:
+            self.hyperparameters["batch_size"] = new_batch_size
+            print(f"Batch size updated to {new_batch_size}")
+        else:
+            print("Batch size not found in hyperparameters. Adding it now.")
+            self.hyperparameters["batch_size"] = new_batch_size
+                
+    
     def update_beta_lif(self, new_beta_lif):
         """
         Update the betaLIF value in both the model and hyperparameters.
@@ -322,6 +338,18 @@ class CheckpointManager:
         self.optimizer = optimizer_class(self.model.net.parameters(), **self.optimizer_params)
 
         return self.model, self.optimizer
+
+    def get_test_acc_history(self):
+        """
+        Extracts the test accuracy history from the loaded checkpoint.
+
+        Args:
+            checkpoint_manager (CheckpointManager): The loaded checkpoint manager.
+
+        Returns:
+            list: The test accuracy history.
+        """
+        return self.test_acc_hist
 
     def get_hyperparameters(self):
         """

@@ -17,7 +17,7 @@ from utils.training_functional import prepare_dataset
 from utils.training_utils import train_as_hypp_change
 from snntorch import functional as SNNF
 
-DEFAULT_DIR = "/project/hypertrain"
+DEFAULT_DIR = "/project/hypertrain2"
 if not os.path.exists(DEFAULT_DIR):
     os.makedirs(DEFAULT_DIR)
 
@@ -47,7 +47,7 @@ HYPERPARAMETERS = [
     ("Device", config.DEVICE, tk.StringVar),
     ("Learning Rate", config.LEARNING_RATE, tk.DoubleVar),
     ("Filter Type", "custom", tk.StringVar, ["custom", "standard", "narrowband"]),
-    ("Model Type", "SNNModel", tk.StringVar, ["SNNModel", "SNNModel_population", "SNNModel_droput", "DynamicSNNModel", "RD_SNNModel", "RD_SNNModel_Synaptic"]),  # New entry for v1.1
+    ("Model Type", "SNNModel", tk.StringVar, ["SNNModel", "SNNModel_population", "SNNModel_droput", "DynamicSNNModel", "RD_SNNModel", "RD_SNNModel_Synaptic","RDL_SNNModel"]),  # New entry for v1.1
     ("Correct Rate", 1, tk.DoubleVar),  
     ("Incorrect Rate", 0, tk.DoubleVar),  
 ]

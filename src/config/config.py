@@ -2,6 +2,7 @@
 BASE_PATH = 'data/GSC/SpeechCommands/speech_commands_v0.02/'
 DEFAULT_DIRECTORY = 'backward'
 DEFAULT_FILE_INDEX = 0
+DEFAULT_MATLAB_DIRECTORY="/project/results2"
 
 # Mel Spectrogram settings
 DEFAULT_HOP_LENGTH = 20

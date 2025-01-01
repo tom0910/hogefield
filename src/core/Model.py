@@ -401,6 +401,54 @@ class BaseSNNModel(nn.Module):
             for layer in self.layers:
                 if hasattr(layer, "reset_state"):
                     layer.reset_state()
+
+#learnable
+class RDL_SNNModel(BaseSNNModel):
+    def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, num_layers=4):
+        super().__init__(num_inputs, num_hidden, num_outputs, tresholdLIF, device)
+        
+        beta1 = torch.full((num_hidden,), betaLIF)
+        # beta1 = torch.rand(num_hidden)  # randomly initialize beta as a vector
+        beta2 = torch.full((num_outputs,), betaLIF)
+        # beta2 = torch.rand(num_outputs)
+        threshold1 = torch.full((num_hidden,), tresholdLIF)
+        threshold2 = torch.full((num_outputs,), tresholdLIF)
+        
+
+        spike_grad = surrogate.fast_sigmoid()
+        self.layers = nn.ModuleList()
+
+        self.layers.append(nn.Linear(num_inputs, num_hidden).to(device))
+        self.layers.append(snn.Leaky(beta=beta1, learn_beta=True, learn_threshold=True, spike_grad=spike_grad, init_hidden=False, threshold=threshold1).to(device))
+
+        for _ in range(num_layers - 1):
+            self.layers.append(nn.Linear(num_hidden, num_hidden).to(device))
+            self.layers.append(snn.Leaky(beta=beta1, learn_beta=True, learn_threshold=True, spike_grad=spike_grad, init_hidden=False, threshold=threshold1).to(device))
+
+        self.layers.append(nn.Linear(num_hidden, num_outputs).to(device))
+        self.layers.append(snn.Leaky(beta=beta2, learn_beta=True, learn_threshold=True, spike_grad=spike_grad, init_hidden=False, threshold=threshold2, output=True).to(device))
+        
+        # Move model to the correct device
+        # self.to(self.device)
+
+    def forward(self, data, timestep):
+        data = data.to(self.device)  # Ensure data is on the correct device
+        spk_rec = []
+        # mem = [None] * (len(self.layers) // 2)
+        # Initialize Membrane States at Each Forward Pass
+        mem = [layer.init_leaky() for layer in self.layers if isinstance(layer, snn.Leaky)]
+
+        for step in range(timestep):
+            x = data[step]
+            for idx in range(0, len(self.layers), 2):
+                x = self.layers[idx](x)
+                x, mem[idx//2] = self.layers[idx+1](x, mem[idx//2])
+
+            # Detach after each timestep to prevent graph buildup
+            spk_rec.append(x)
+
+        return torch.stack(spk_rec)
+
     
 class RD_SNNModel(BaseSNNModel):
     def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, num_layers=4):
@@ -446,7 +494,7 @@ import torch.nn as nn
 import snntorch as snn
 
 class RD_SNNModel_Synaptic(BaseSNNModel):
-    def __init__(self, num_inputs, num_hidden, num_outputs, tresholdLIF, device, num_layers=4, alpha=0.7, betaLIF=0.7):
+    def __init__(self, num_inputs, num_hidden, num_outputs, tresholdLIF, device, num_layers=4, alpha=0.9, betaLIF=0.8):
         super().__init__(num_inputs, num_hidden, num_outputs, tresholdLIF, device)
 
         spike_grad = snn.surrogate.fast_sigmoid()

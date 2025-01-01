@@ -251,7 +251,7 @@ def train_as_hypp_change(
             checkpoint_mngr.loss_hist = loss_hist
             checkpoint_mngr.acc_hist = acc_hist
 
-            if counter % 100 == 0:  # Update plot png every 100 iterations
+            if counter % 20 == 0:  # Update plot png every 100 iterations
                 FT.plot_training(fig, ax1, ax2, loss_hist, acc_hist, plots_dir, f"epoch_{epoch}_iter_{counter}.png")
 
             if counter % 10 == 0:  # Save checkpoint every 500 iterations

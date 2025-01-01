@@ -16,7 +16,7 @@ def add_pth_values(pth_file_path):
         # Add or update new values
         for key, value in checkpoint.items():
             # checkpoint[key] = value
-            print(f"Set '{key}' to {value}.")
+            print(f"---------- Set: '{key}' to {value}.")
 
         # Save the updated checkpoint
         #torch.save(checkpoint, output_file_path)
@@ -28,7 +28,7 @@ def add_pth_values(pth_file_path):
         print(f"An error occurred: {e}")
 
 # Example Usage
-pth_file_path = "/project/hypertrain/nband_nmel44_4lyr_lr1_5th/checkpoint_iter_lr_changed.pth"  # Input file path
+pth_file_path = "/project/hypertrain2/nb_n40_LearnBetaThr_fromfixedvalues/pth/epoch_7.pth"  # Input file path
 
 
 add_pth_values(pth_file_path)

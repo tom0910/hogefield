@@ -99,6 +99,9 @@ def update_plot():
     save_audio(audio_sample, file_name="original_waveform.wav", save_dir="src/run/SaveAudio")
     #plot waveform
     time, amplitude = xy_waveform_calc(audio_sample)
+    # Waveform plot
+    print(f"amplitude: type={type(amplitude)}, shape={getattr(amplitude, 'shape', 'N/A')}")
+    
     plot_waveform(time, amplitude, canvases[0], axes[0])
     # because of new audiosample, change mel spectrogram plot
     update_plot_mel()
@@ -117,6 +120,8 @@ def update_plot_mel():
     )
     #calculations:
     mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale = mel_spctgrm_calc(audio_sample, mel_config)
+    # Mel-spektrogram plot
+    print(f"mel_spectrogram: type={type(mel_spectrogram)}, shape={getattr(mel_spectrogram, 'shape', 'N/A')}")    
     #plot mel spectrogram
     plot_mel_spectrogram(mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale, canvases[1], axes[1])
     #because of a new mel spectrogram, change spike train plot
@@ -132,6 +137,9 @@ def update_plot_spike():
     #calculation:
     num_neurons, num_spike_index, spikes, _, _ = FU.generate_spikes(audio_sample, mel_config, spike_threshold_updated, norm_inp=False, norm_cumsum=False)
     # num_neurons, num_spike_index, spikes, _, _ = FU.generate_spikes_from_audio(audio_sample, mel_config, spike_threshold_updated, norm_inp=False, norm_cumsum=False)
+    # Spike train vagy distribution plot
+    print(f"spikes: type={type(spikes)}, shape={getattr(spikes, 'shape', 'N/A')}")
+    
     print("spikes calculated")
     # plot spike trains or distribution
     if plot_choice == C.DEFAULT_SPIKE_PLT_PICK:
@@ -150,6 +158,9 @@ def update_plot_spike():
     #calculation of melspectrogram reconstruction:
     mel_spectrogram_approx=FU.inverse_generate_spikes(spikes, mel_config, audio_sample.sample_rate, spike_threshold_updated, norm_inp=True, norm_cumsum=True)
     print("melspctgrm reconstructed")
+    # Mel-spektrogram rekonstrukciója
+    print(f"mel_spectrogram_approx: type={type(mel_spectrogram_approx)}, shape={getattr(mel_spectrogram_approx, 'shape', 'N/A')}")
+    
     #plot:
     plot_mel_spectrogram_inv(
         mel_spectrogram=mel_spectrogram_approx,
@@ -163,6 +174,8 @@ def update_plot_spike():
     )    
     #calculation of audio waveform reconstruction:
     waveform_approx = FU.inverse_mel_to_waveform(mel_spectrogram=mel_spectrogram_approx, mel_config=mel_config , sample_rate=audio_sample.sample_rate)
+    # Rekonstruktált hullámforma plot
+    print(f"waveform_approx: type={type(waveform_approx)}, shape={getattr(waveform_approx, 'shape', 'N/A')}")    
     # Convert waveform to numpy if it's a torch.Tensor
     if isinstance(waveform_approx, torch.Tensor):
         waveform_approx = waveform_approx.numpy()

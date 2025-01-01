@@ -230,6 +230,7 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     threshold_slider.config(command=lambda _: update_label())
         
     save_button_widget = tk.Button(widget_frame, text="Save Parms.")
+    save_matdata_widget = tk.Button(widget_frame, text="Save .mat")
     
     # Add an Entry widget for the filename
     filename_label = tk.Label(widget_frame, text="ID:")
@@ -256,7 +257,8 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
         (spk_freq_label, None,None),
         (filter_choice_widget,None,None),
         (mel_filter_plot_radio_widget,None,None),
-        (save_button_widget,filename_label,filename_entry)
+        (save_button_widget,filename_label,filename_entry),
+        (save_matdata_widget,None,None)
     ]
         
 
@@ -289,7 +291,8 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
         spk_freq_label,
         hop_length_entry, n_mels_entry,
         save_button_widget,
-        filename_entry
+        filename_entry,
+        save_matdata_widget
     )
     
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
