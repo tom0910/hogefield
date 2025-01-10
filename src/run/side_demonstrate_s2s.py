@@ -19,7 +19,7 @@ from core.MelSpectrogramConfig import MelSpectrogramConfig
 import config.config as C
 from config.config import BASE_PATH, DEFAULT_DIRECTORY, DEFAULT_FILE_INDEX, DEFAULT_THRESHOLD
 from display.tk_widgets_setup import create_widgets, initialize_plots, create_plots_frame
-from display.tk_display_functions import xy_waveform_calc, save_audio, mel_spctgrm_calc
+from display.tk_display_functions import xy_waveform_calc, save_audio, mel_spctgrm_calc, mel_spctgrm_calc2
 from utils.widget_sync_utils import set_audio_sample_from_widget_values, set_mel_config_from_widget_values
 from core.Spikes import Spikes
 from display.plotting import plot_waveform, plot_mel_spectrogram, plot_spikes, plot_distribution, plot_mel_spectrogram_inv
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     # Create the main Tkinter window
     root = tk.Tk()
-    root.title("Spie Generation Sensory Lab")
+    root.title("Spile Generation Sensory Lab")
     root.geometry("2800x800")
 
     # Configure root grid for responsive layout
@@ -76,7 +76,8 @@ if __name__ == "__main__":
     # Create Widgets using Tkinter
     (
         directory_dropdown, 
-        file_slider, 
+        file_slider,
+        file_slider_entry,
         # n_fft_input,
         n_fft_label, n_fft_slider, n_fft_entry,
         hop_length_slider, 
@@ -145,9 +146,9 @@ if __name__ == "__main__":
             mel_filter_plot_radio_widget
         )
         #calculations:
-        mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale = mel_spctgrm_calc(audio_sample, mel_config)
+        mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale = mel_spctgrm_calc2(audio_sample, mel_config)
         #plot mel spectrogram
-        plot_mel_spectrogram(mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale, canvases[1], axes[1])
+        plot_mel_spectrogram(mel_spectrogram, updated_audio_sample, updated_mel_config, sample_rate, custom_mel_scale, canvases[1], axes[1], is_tick_color=None)
         #collectmatlab data:
         collected_data_for_matlab.update({"mel_spectrogram":mel_spectrogram, "mel_time":mel_spectrogram.shape[-1]})
         #because of a new mel spectrogram, change spike train plot
@@ -161,7 +162,8 @@ if __name__ == "__main__":
         plot_choice = spike_plot_radio_widget.get()
         
         #calculation:
-        num_neurons, num_spike_index, spikes, _, _ = FU.generate_spikes(audio_sample, mel_config, spike_threshold_updated, norm_inp=False, norm_cumsum=False)
+        # num_neurons, num_spike_index, spikes, _, _ = FU.generate_spikes(audio_sample, mel_config, spike_threshold_updated, norm_inp=False, norm_cumsum=False)
+        num_neurons, num_spike_index, spikes, original_min_max, _ = FU.generate_spikes(audio_sample, mel_config, spike_threshold_updated, norm_inp=True, norm_cumsum=False)
         print("spikes calculated")
         # plot spike trains or distribution
         if plot_choice == C.DEFAULT_SPIKE_PLT_PICK:
@@ -180,7 +182,8 @@ if __name__ == "__main__":
             raise ValueError("Invalid plot_choice value. Use 'spikes' or 'distribution'.")
         print("reconstructed plots tiggered")
         #calculation of melspectrogram reconstruction:
-        mel_spectrogram_approx=FU.inverse_generate_spikes(spikes, mel_config, audio_sample.sample_rate, spike_threshold_updated, norm_inp=True, norm_cumsum=True)
+        # mel_spectrogram_approx=FU.inverse_generate_spikes(spikes, mel_config, audio_sample.sample_rate, spike_threshold_updated, norm_inp=True, norm_cumsum=True)
+        mel_spectrogram_approx=FU.inverse_generate_spikes2(spikes, mel_config, audio_sample.sample_rate, spike_threshold_updated, norm_inp=True, norm_cumsum=False, orig_min_max=original_min_max, norm_out=True)
         print("melspctgrm reconstructed")
         #plot:
         plot_mel_spectrogram_inv(
@@ -191,7 +194,8 @@ if __name__ == "__main__":
             custom_mel_scale=None,  # Or pass if custom_mel_scale is needed
             title="Approximated Mel Spectrogram",
             canvas=canvases[4],
-            ax = axes[4]
+            ax = axes[4],
+            # original_max=original_min_max[1]
         ) 
         #save data for matlab
         collected_data_for_matlab.update({"mel_spectrogram_approx":mel_spectrogram_approx, "mel_approx_time":mel_spectrogram_approx.shape[-1]})   
@@ -234,6 +238,7 @@ if __name__ == "__main__":
 
     directory_dropdown.bind("<<ComboboxSelected>>", lambda e: update_plot())
     file_slider.config(command=lambda v: update_plot())
+    file_slider_entry.bind('<Return>', lambda event: update_plot())
     # observ nfft entry
     # n_fft_input.bind('<Return>', lambda event: update_plot_mel())
     n_fft_slider.config(command=lambda v: update_plot_mel())

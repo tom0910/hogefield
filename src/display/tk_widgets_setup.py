@@ -118,12 +118,15 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     directory_dropdown.set(config.DEFAULT_DIRECTORY)
 
     # File Index Slider
+    file_index_var = tk.IntVar(value=10)
     file_slider_label = ttk.Label(widget_frame, text='File Index:')
-    file_slider = tk.Scale(widget_frame, from_=0, to=len(audio_sample.get_files()) - 1, orient='horizontal')
+    file_slider = tk.Scale(widget_frame, from_=0, to=len(audio_sample.get_files()) - 1, orient='horizontal',variable=file_index_var)
+    file_slider_entry = ttk.Entry(widget_frame, textvariable=file_index_var, width=5)
 
     n_fft_var = tk.IntVar(value=config.DEFAULT_N_FFT)
     n_fft_label = ttk.Label(widget_frame, text='n_fft:')
-    n_fft_slider = tk.Scale(widget_frame, from_=1, to=1024, orient='horizontal', variable=n_fft_var)
+    # n_fft_slider = tk.Scale(widget_frame, from_=1, to=1024, orient='horizontal', variable=n_fft_var)
+    n_fft_slider = tk.Scale(widget_frame, from_=256, to=2048, orient='horizontal', variable=n_fft_var, resolution=256)
     n_fft_entry = ttk.Entry(widget_frame, textvariable=n_fft_var, width=5)
 
     
@@ -179,8 +182,8 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
 
     threshold_var = tk.DoubleVar(value=config.DEFAULT_THRESHOLD)
     threshold_label = ttk.Label(widget_frame, text='Threshold:')
-    threshold_slider = tk.Scale(widget_frame, from_=0, to=config.DEFAULT_THRESHOLD_MAX, resolution=config.DEFAULT_THRESHOLD_STEP, orient='horizontal', variable=threshold_var, length=175)
-    threshold_entry = ttk.Entry(widget_frame, textvariable=threshold_var, width=5)
+    threshold_slider = tk.Scale(widget_frame, from_=config.DEFAULT_THRESHOLD_MIN, to=config.DEFAULT_THRESHOLD_MAX, resolution=config.DEFAULT_THRESHOLD_STEP, orient='horizontal', variable=threshold_var, length=175)
+    threshold_entry = ttk.Entry(widget_frame, textvariable=threshold_var, width=10)
     
     print("After initialization:", type(threshold_entry))  # Expect <class 'tkinter.ttk.Entry'>
 
@@ -242,7 +245,7 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     # Arrange widgets in a grid layout for better UI
     widgets = [
         (directory_dropdown_label, directory_dropdown,None),
-        (file_slider_label, file_slider, None),
+        (file_slider_label, file_slider, file_slider_entry),
         # (n_fft_label, n_fft_input, None),
         (n_fft_label, n_fft_slider, n_fft_entry),
         (hop_length_label, hop_length_slider,  hop_length_entry),
@@ -275,6 +278,7 @@ def create_widgets(audio_sample, mel_config, spikes_data, widget_frame):
     return (
         directory_dropdown, 
         file_slider, 
+        file_slider_entry,
         # n_fft_input, 
         n_fft_label, n_fft_slider, n_fft_entry,
         hop_length_slider, 
@@ -357,3 +361,92 @@ def create_plots_frame(root):
     out_rev_mel_sptgrm_plt = subframes[4]  
     out_rev_play = subframes[5] 
     return widget_frame, out_audio_wave_plt, out_mel_sptgrm_plt, out_spike_raster_plt, out_rev_spike_raster_plt, out_rev_mel_sptgrm_plt, out_rev_play  
+
+def create_plots_frame_simple(root):
+    
+    # Configure the grid for `root`
+    root.columnconfigure(0, weight=0)  # Fixed width for `widget_frame`
+    root.columnconfigure(1, weight=1)  # Expand `plot_frame` to fill remaining space
+    root.rowconfigure(0, weight=1)     # Allow vertical resizing
+    
+    # Create a frame for widgets (left side)
+    widget_frame = ttk.Frame(root, padding=10, relief="ridge")
+    widget_frame.grid(row=0, column=0, sticky="ns")  # Left-side frame
+
+    # Create a frame for the plots
+    plot_frame = ttk.Frame(root, padding=10, relief="sunken")
+    plot_frame.grid(row=0, column=1, sticky="nsew")
+
+    # Create subframes
+    subframes = [ttk.Frame(plot_frame) for _ in range(7)]  # 4 for 2x2 and 3 for 1x3
+ 
+
+    # Arrange 2x2 grid (top part), each spanning two columns
+    subframes[0].grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky="nsew")  # Top-left
+    subframes[1].grid(row=0, column=3, columnspan=3, padx=5, pady=5, sticky="nsew")  # Top-right
+    subframes[3].grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="nsew")  # Bottom-left of 2x2
+    subframes[2].grid(row=1, column=3, columnspan=3, padx=5, pady=5, sticky="nsew")  # Bottom-right of 2x2
+
+    # Arrange 1x3 grid (bottom part)
+    # Arrange 1x3 grid (bottom part)
+    subframes[4].grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="nsew")  # Bottom-left
+    subframes[5].grid(row=2, column=2, columnspan=2, padx=5, pady=5, sticky="nsew")  # Bottom-center
+    subframes[6].grid(row=2, column=4, columnspan=2, padx=5, pady=5, sticky="nsew")  # Bottom-right (spans 2 columns)
+
+
+    # Configure row and column weights for dynamic resizing
+    for col in range(6):  # 4 columns for 2x2 and 1x3 grids
+        plot_frame.columnconfigure(col, weight=1)
+
+    plot_frame.rowconfigure(0, weight=1)  # First row (2x2 grid)
+    plot_frame.rowconfigure(1, weight=1)  # Second row (2x2 grid)
+    plot_frame.rowconfigure(2, weight=1)  # Third row (1x3 grid)
+
+    out_audio_wave_plt = subframes[0]
+    out_mel_sptgrm_plt = subframes[1]
+    out_spike_raster_plt = subframes[4]
+    out_rev_spike_raster_plt = subframes[5]
+    out_rev_mel_sptgrm_plt = subframes[6]
+    out_rev_play = subframes[2]
+    out_rev_play2 = subframes[3]
+
+    return widget_frame, out_audio_wave_plt, out_mel_sptgrm_plt, out_spike_raster_plt, out_rev_spike_raster_plt, out_rev_mel_sptgrm_plt, out_rev_play,out_rev_play2
+
+
+def create_plots_frame_simple2(root):
+    
+    # Configure the grid for `root`
+    root.columnconfigure(0, weight=0)  # Fixed width for `widget_frame`
+    root.columnconfigure(1, weight=1)  # Expand `plot_frame` to fill remaining space
+    root.rowconfigure(0, weight=1)     # Allow vertical resizing
+    
+    # Create a frame for widgets (left side)
+    widget_frame = ttk.Frame(root, padding=10, relief="ridge")
+    widget_frame.grid(row=0, column=0, sticky="ns")  # Left-side frame
+
+    # Create a frame for the plots
+    plot_frame = ttk.Frame(root, padding=10, relief="sunken")
+    plot_frame.grid(row=0, column=1, sticky="nsew")
+
+    # Define a new grid layout
+    subframes = [ttk.Frame(plot_frame) for _ in range(6)]
+
+    # Set layout for `out_audio_wave_plt` (double-wide)
+    subframes[0].grid(row=0, column=0, columnspan=3, padx=5, pady=5, sticky="nsew")
+
+    # Set layout for the other frames
+    subframes[1].grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="nsew")
+
+    # Set grid weights for dynamic resizing
+    plot_frame.rowconfigure(0, weight=1)  # First row
+    plot_frame.rowconfigure(1, weight=1)  # Second row
+    
+    for i in range(3):  # Three columns
+        plot_frame.columnconfigure(i, weight=1)
+
+    out_audio_wave_plt = subframes[0]
+    out_spike_raster_plt = subframes[1]
+
+
+    return widget_frame, out_audio_wave_plt, out_spike_raster_plt
+

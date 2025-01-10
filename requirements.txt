@@ -9,4 +9,5 @@ soundfile
 ipywidgets
 ipython
 tkhtmlview
+scikit-learn
 

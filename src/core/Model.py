@@ -404,15 +404,19 @@ class BaseSNNModel(nn.Module):
 
 #learnable
 class RDL_SNNModel(BaseSNNModel):
-    def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, num_layers=4):
+    def __init__(self, num_inputs, num_hidden, num_outputs, betaLIF, tresholdLIF, device, num_layers=4, random_learning=False):
         super().__init__(num_inputs, num_hidden, num_outputs, tresholdLIF, device)
-        
-        beta1 = torch.full((num_hidden,), betaLIF)
-        # beta1 = torch.rand(num_hidden)  # randomly initialize beta as a vector
-        beta2 = torch.full((num_outputs,), betaLIF)
-        # beta2 = torch.rand(num_outputs)
-        threshold1 = torch.full((num_hidden,), tresholdLIF)
-        threshold2 = torch.full((num_outputs,), tresholdLIF)
+
+        if random_learning:
+            beta1 = torch.rand(num_hidden)
+            threshold1 = torch.rand(num_hidden)
+            beta2 = torch.rand(num_outputs)
+            threshold2 = torch.rand(num_outputs)
+        else:
+            beta1 = torch.full((num_hidden,), betaLIF)
+            beta2 = torch.full((num_outputs,), betaLIF)
+            threshold1 = torch.full((num_hidden,), tresholdLIF)
+            threshold2 = torch.full((num_outputs,), tresholdLIF)        
         
 
         spike_grad = surrogate.fast_sigmoid()
@@ -527,41 +531,56 @@ class RD_SNNModel_Synaptic(BaseSNNModel):
 
         return torch.stack(spk_rec)
 
-    # def forward(self, data, timestep):
-    #     spk_rec = []
-    #     # syn = [None] * (len(self.layers) // 2)
-    #     # mem = [None] * (len(self.layers) // 2)
-    #     # Initialize synaptic and membrane states
-    #     syn = [layer.reset_mem() if isinstance(layer, snn.Synaptic) else None for layer in self.layers]
-    #     mem = [layer.reset_mem() if isinstance(layer, snn.Synaptic) else None for layer in self.layers]
+
+class RDL_SNNModel_Synaptic(BaseSNNModel):
+    def __init__(self, num_inputs, num_hidden, num_outputs, tresholdLIF, device, num_layers=4, alpha=0.9, betaLIF=0.8, random_learning=False):
+        super().__init__(num_inputs, num_hidden, num_outputs, tresholdLIF, device)
+
+        if random_learning:
+            beta1 = torch.rand(num_hidden)
+            alpha1 = torch.rand(num_hidden)
+            threshold1 = torch.rand(num_hidden)
+            beta2 = torch.rand(num_outputs)
+            alpha2 = torch.rand(num_outputs)
+            threshold2 = torch.rand(num_outputs)
+        else:
+            beta1 = torch.full((num_hidden,), betaLIF)
+            alpha1 = torch.full((num_hidden,), betaLIF)
+            beta2 = torch.full((num_outputs,), betaLIF)
+            alpha2 = torch.full((num_outputs,), betaLIF)
+            threshold1 = torch.full((num_hidden,), tresholdLIF)
+            threshold2 = torch.full((num_outputs,), tresholdLIF)
+
+        spike_grad = snn.surrogate.fast_sigmoid()
+
+        # Use ModuleList to register layers
+        self.layers = nn.ModuleList()
         
-        
-    #     # def reset_mem(self):
-    #     #     self.syn = torch.zeros_like(self.syn, device=self.syn.device)
-    #     #     self.mem = torch.zeros_like(self.mem, device=self.mem.device)
-    #     #     return self.syn, self.mem
+        self.layers.append(nn.Linear(num_inputs, num_hidden))
+        self.layers.append(snn.Synaptic(alpha=alpha1, beta=beta1, learn_alpha=True, learn_beta=True, spike_grad=spike_grad, threshold=threshold1, learn_threshold=True))
 
-    #     # for step in range(timestep):
-    #     #     x = data[step]
-    #     #     for idx in range(0, len(self.layers), 2):
-    #     #         x = self.layers[idx](x)
-    #     #         # spk1, syn1, mem1 = self.lif1(cur1, syn1, mem1)
-    #     #         x, syn[idx // 2], mem[idx // 2] = self.layers[idx + 1](x, syn[idx // 2], mem[idx // 2])
-    #     #     spk_rec.append(x)
+        for _ in range(num_layers - 1):
+            self.layers.append(nn.Linear(num_hidden, num_hidden))
+            self.layers.append(snn.Synaptic(alpha=alpha1, beta=beta1, learn_alpha=True, learn_beta=True, spike_grad=spike_grad, threshold=threshold1, learn_threshold=True))
 
-    #     # return torch.stack(spk_rec)
-        
-    #     for step in range(timestep):
-    #         x = data[step]
-    #         for idx in range(0, len(self.layers), 2):
-    #             x = self.layers[idx](x)
-    #             if isinstance(self.layers[idx+1], snn.Synaptic):
-    #                 x, syn[idx // 2], mem[idx // 2] = self.layers[idx + 1](x, syn[idx // 2], mem[idx // 2])
-    #         spk_rec.append(x)
-
-    #     return torch.stack(spk_rec)        
+        self.layers.append(nn.Linear(num_hidden, num_outputs))
+        self.layers.append(snn.Synaptic(alpha=alpha2, beta=beta2, learn_alpha=True, learn_beta=True, spike_grad=spike_grad, threshold=threshold2, learn_threshold=True, output=True))
+        self.to(self.device)
+    def forward(self, data, timestep):
+        spk_rec = []
+        # Initialize synaptic and membrane states correctly
+        syn, mem = zip(*[layer.reset_mem() if isinstance(layer, snn.Synaptic) else (None, None) for layer in self.layers])
+        syn, mem = list(syn), list(mem)
 
 
+        for step in range(timestep):
+            x = data[step]
+            for idx in range(0, len(self.layers), 2):
+                x = self.layers[idx](x)  # Corresponds to cur1 = self.fc1(x)
+                x, syn[idx // 2], mem[idx // 2] = self.layers[idx + 1](x, syn[idx // 2], mem[idx // 2])  # spk1, syn1, mem1 = self.lif1(cur1, syn1, mem1)
+            spk_rec.append(x)  # Collects spike output from the final layer
+
+        return torch.stack(spk_rec)
 
 
 # old not real dynamic assumed

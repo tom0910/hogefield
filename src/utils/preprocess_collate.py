@@ -52,6 +52,29 @@ def gen_melspecrogram_common(tensors_or_waveform, n_mels, sample_rate, f_min, f_
     mel_spectrogram = custom_mel_scale(spectrogram)    
     return mel_spectrogram, sample_rate, custom_mel_scale
 
+def gen_melspecrogram_common2(tensors_or_waveform, n_mels, sample_rate, f_min, f_max, filter, n_fft, hop_length, power, center):
+    # make sure that Magnitude Spectrogram (power=1.0) is made and FFTs are normalized (normalized=Trues)   
+
+    power=1.0 #make sure that this is amplitide spectrogram
+    # Spectrogram transformation
+    spectrogram_transform = Spectrogram(n_fft=n_fft, hop_length=hop_length, power=power, center=center, normalized=True)
+    spectrogram = spectrogram_transform(tensors_or_waveform)
+
+    # Initialize CustomMelScale with the FILTER TYPE and configuration
+    custom_mel_scale = CustomMelScale(
+        n_mels=n_mels,
+        sample_rate=sample_rate,
+        f_min=f_min,
+        f_max=f_max,
+        n_stft=n_fft // 2 + 1,
+        filter_type=filter,
+        # norm="slaney"
+    )
+
+    # Apply the CustomMelScale transformation
+    mel_spectrogram = custom_mel_scale(spectrogram)    
+    return mel_spectrogram, sample_rate, custom_mel_scale
+
 def preprocess_collate(tensors, targets, n_fft, hop_length, n_mels, sample_rate, f_min, f_max, threshold, filter):
 
     tensors_padded = pad_sequence(tensors)

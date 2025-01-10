@@ -10,22 +10,101 @@ from matplotlib.figure import Figure
 import config.config as config
 
 # Function to update the audio waveform
-def plot_waveform(x_values, waveform, canvas, ax):
+def plot_waveform(x_values, waveform, canvas, ax, is_labels=True):
     # Clear the existing plot content
     ax.clear()
-    
     title="Audio Amplitude Over Time"
     # Plot the waveform
     ax.plot(x_values, waveform)
-    ax.set_title(title)
-    ax.set_xlabel("Time (seconds)")
-    ax.set_ylabel("Amplitude")
+    if is_labels:
+        ax.set_title(title)
+        ax.set_xlabel("Time (seconds)")
+        ax.set_ylabel("Amplitude")
     ax.figure.tight_layout()  # Minimize margin
     
     # Redraw the canvas with updated data
     canvas.draw()
 
-def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom_mel_scale, canvas, ax):
+from matplotlib.widgets import Slider  
+
+def plot_waveform_with_slider(x_values, waveform, canvas, ax, is_label=True):
+    # Clear the existing plot content
+    ax.clear()
+
+    # Initial range for plotting
+    start_idx, end_idx = 3200, 4800
+
+    # Plot the waveform
+    line, = ax.plot(x_values[start_idx:end_idx], waveform[start_idx:end_idx])
+    if is_label:
+        ax.set_title("Audio Amplitude Over Time")
+        ax.set_xlabel("Time (seconds)")
+        ax.set_ylabel("Amplitude")
+
+    if not hasattr(ax, "_slider"):
+        # Create slider if it doesn't exist
+        slider_ax = ax.figure.add_axes([0.2, 0.01, 0.65, 0.03])
+        ax._slider = Slider(slider_ax, "Range", 0, len(x_values) - 1000, valinit=start_idx, valstep=1)
+    else:
+        # Update existing slider's range and reset its position
+        ax._slider.valmin = 0
+        ax._slider.valmax = len(x_values) - 1000
+        ax._slider.set_val(start_idx)
+        ax._slider.ax.set_visible(True)  # Make sure it's visible if previously hidden
+    slider = ax._slider
+
+
+    # Update the plot when slider value changes
+    def update(val):
+        start_idx = int(slider.val)
+        end_idx = start_idx + 1000  # Fixed width of 1000 samples
+        line.set_xdata(x_values[start_idx:end_idx])
+        line.set_ydata(waveform[start_idx:end_idx])
+        ax.relim()
+        ax.autoscale_view()
+        canvas.draw_idle()  # Redraw dynamically
+
+
+    slider.on_changed(update)
+
+    # Redraw the canvas with updated data
+    canvas.draw()
+
+
+
+# def plot_waveform_with_slider(x_values, waveform, canvas, ax):
+#     # Clear the existing plot content
+#     ax.clear()
+
+#     # Initial range for plotting
+#     start_idx, end_idx = 3200, 4800
+
+#     # Plot the waveform
+#     line, = ax.plot(x_values[start_idx:end_idx], waveform[start_idx:end_idx])
+#     ax.set_title("Audio Amplitude Over Time")
+#     ax.set_xlabel("Time (seconds)")
+#     ax.set_ylabel("Amplitude")
+
+#     # Add a slider
+#     slider_ax = ax.figure.add_axes([0.2, 0.01, 0.65, 0.03])  # Position for the slider
+#     slider = Slider(slider_ax, 'Range', 0, len(x_values) - 1000, valinit=start_idx, valstep=1)
+
+#     # Update the plot when slider value changes
+#     def update(val):
+#         start_idx = int(slider.val)
+#         end_idx = start_idx + 1000  # Fixed width of 1000 samples
+#         line.set_xdata(x_values[start_idx:end_idx])
+#         line.set_ydata(waveform[start_idx:end_idx])
+#         ax.relim()
+#         ax.autoscale_view()
+#         canvas.draw_idle()
+
+#     slider.on_changed(update)
+
+#     # Redraw the canvas with updated data
+#     canvas.draw()    
+
+def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom_mel_scale, canvas, ax, is_tick_color=True):
     # Ensure `_colorbar` exists as a default attribute
     if not hasattr(ax, "_colorbar"):
         ax._colorbar = None
@@ -82,8 +161,9 @@ def plot_mel_spectrogram(mel_spec, audio_sample, mel_config, sample_rate, custom
             ha="center",
             fontsize=12,
         )
-        for ytick in yticks - 1:
-            ax.axhline(y=ytick + 0.5, color="orange", linestyle=":", linewidth=1.5)
+        if is_tick_color:
+            for ytick in yticks - 1:
+                ax.axhline(y=ytick + 0.5, color="orange", linestyle=":", linewidth=1.5)
         
         # Redraw the canvas
         # ax.figure.tight_layout()
@@ -185,6 +265,8 @@ def plot_spikes(spikes,num_neurons, num_spike_index, canvas, ax):
     # Get spike coordinates
     y_coords, x_coords = torch.nonzero(spikes, as_tuple=True)
     ax.scatter(x_coords, y_coords, s=1, c="black", label="")
+    print(y_coords.shape, x_coords.shape)
+    
 
     # Find the channel with the highest average spike rate
     channel, count = find_max_one_channels(spikes)
@@ -262,6 +344,7 @@ def plot_mel_spectrogram_inv(
     title,
     canvas,
     ax,
+    original_max=None, 
 ):
     """
     Plot a mel spectrogram approximation on a given Matplotlib Axes embedded in a Tkinter canvas.
@@ -284,7 +367,11 @@ def plot_mel_spectrogram_inv(
         mel_spectrogram = mel_spectrogram.squeeze().numpy()
 
     # Plot the Mel spectrogram approximation
-    img = ax.imshow(mel_spectrogram, aspect='auto', origin='lower', vmin=None, vmax=None)
+    # img = ax.imshow(mel_spectrogram, aspect='auto', origin='lower', vmin=None, vmax=None)
+    
+    vmax_value = original_max if original_max is not None else mel_spectrogram.max()
+    img = ax.imshow(mel_spectrogram, aspect='auto', origin='lower', vmin=0, vmax=vmax_value)
+
 
     # Configure plot title with directory information
     ax.set_title(f'{title} - {audio_sample.selected_directory}', fontsize=12)
@@ -308,7 +395,9 @@ def plot_mel_spectrogram_inv(
     # Add or update the colorbar
     if not hasattr(ax, "_colorbar") or ax._colorbar is None:
         cbar = ax.figure.colorbar(img, ax=ax, orientation='vertical', format="%0.1f")
-        cbar.set_ticks(np.linspace(mel_spectrogram.min(), mel_spectrogram.max(), 10))
+        # cbar.set_ticks(np.linspace(mel_spectrogram.min(), mel_spectrogram.max(), 10))
+        cbar.set_ticks(np.linspace(mel_spectrogram.min(), vmax_value, 10))
+
         ax._colorbar = cbar
     else:
         ax._colorbar.update_normal(img)

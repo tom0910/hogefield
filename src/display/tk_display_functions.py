@@ -80,6 +80,14 @@ def mel_spctgrm_calc(audio_sample, mel_config):
 
     return(mel_spectrogram, audio_sample, mel_config, sample_rate, custom_mel_scale)
 
+def mel_spctgrm_calc2(audio_sample, mel_config):
+    """Plot the mel spectrogram and filter banks in the specified widget."""
+    mel_spectrogram, sample_rate, custom_mel_scale  = FU.get_mel_spectrogram2(audio_sample, mel_config)
+    mel_spectrogram = normalize_spectrogram_global(mel_spectrogram)
+    # normalization will be done in FU.get_mel_spectrogram2 after STFT
+
+    return(mel_spectrogram, audio_sample, mel_config, sample_rate, custom_mel_scale)
+
 def reconstructed_mel_spctgrm_calc(audio_sample, mel_config):
     """Plot the mel spectrogram and filter banks in the specified widget."""
     # mel_spectrogram, sample_rate, custom_mel_scale  = FU.get_mel_spectrogram(audio_sample, mel_config)

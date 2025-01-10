@@ -1,3 +1,12 @@
 python3-tk
 screen
 nvtop
+libgl1-mesa-glx
+libglib2.0-0
+libxcb-xinerama0
+ libxcb-xinput0
+libxcb-xfixes0 
+libxcb-glx0 
+libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 libxcb-xtest0
+libxcb-randr0 libxcb-shape0 libxcb-xkb1 libxkbcommon-x11-0 libxcb1
+libx11-xcb1 libxcb-glx0 libgl1-mesa-glx libglib2.0-0

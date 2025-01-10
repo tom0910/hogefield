@@ -54,6 +54,8 @@ def export_generate_matlab(true_labels, predicted_labels, class_labels, test_acc
 
 # List of 6 .pth files to compare
 model_files = [
+    # "/project/hypertrain2/nb_n40_LearnBeta/pth/epoch_64.pth",
+    "/project/hypertrain2/nb_n40_correctrate_LearnBetaThr/pth/epoch_5.pth",
     "/project/hypertrain2/nb_n20/pth/epoch_64.pth",
     "/project/hypertrain2/nb_n40/pth/epoch_64.pth",
     "/project/hypertrain2/nb_n80/pth/epoch_64.pth",

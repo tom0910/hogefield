@@ -8,6 +8,10 @@ data/
 
 # General ignores
 .DS_Store
+*.log
+*.pth
+*.packaging
+*.mat
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
